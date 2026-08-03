@@ -12,11 +12,11 @@
   "s1_shipFee": "是",
   "s1_address": "",
   "s2_newPrice": "9000",
-  "s2_newRatio": "94.0",
+  "s2_newRatio": "100.0",
   "s2_masterPrice": "2000",
   "s2_masterRatio": "0",
-  "s2_specialPrice": "24000",
-  "s2_specialRatio": "6",
+  "s2_specialPrice": "0",
+  "s2_specialRatio": "0",
   "s2_fixedCost": "1700",
   "s2_profit": "0",
   "s3_length": "",
@@ -50,9 +50,9 @@
   "cb_9": false,
   "style": "板材",
   "dimType": "",
-  "materialType": "阻燃",
+  "materialType": "普通",
   "_v": 164,
   "_userSetPrices": [],
   "_customCB": [],
-  "_publishedAt": "2026-08-03T11:44:26.782Z"
+  "_publishedAt": "2026-08-03T11:50:46.811Z"
 }
