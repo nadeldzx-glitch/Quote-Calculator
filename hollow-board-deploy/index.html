@@ -1775,14 +1775,21 @@ const SHARED_TEMPLATE_FETCH = 'shared-template.json';  // 部署后站点根路�
 // 请使用权限最小化的 token 并定期轮换。
 const GITHUB_TOKEN = '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';
 let sharedTemplate = null;   // 运行时从 shared-template.json 载入（admin 发布的全局模板）
+let _appliedPublishedAt = null;  // 当前页面已应用的共享模板发布时间戳
+let _syncBannerShown = false;    // "有新模板"提示横幅是否已显示
 
 // 异步拉取共享模板（全员同步读取）。失败/为空则回退 localStorage/出厂。
+// 注意：必须带 ?_t= 时间戳参数——GitHub Pages CDN 对静态文件缓存最长10分钟，
+// 不带参数同事可能拿到旧模板（上次"同事看到旧模板"即此原因）。
 async function loadSharedTemplate(){
   try {
-    const res = await fetch(SHARED_TEMPLATE_FETCH, { cache: 'no-store' });
+    const res = await fetch(SHARED_TEMPLATE_FETCH + '?_t=' + Date.now(), { cache: 'no-store' });
     if(!res.ok) return;
     const data = await res.json();
-    if(data && !data._empty) sharedTemplate = data;
+    if(data && !data._empty){
+      sharedTemplate = data;
+      _appliedPublishedAt = data._publishedAt || null;
+    }
   } catch(e) { /* 离线或网络失败：忽略，回退本地 */ }
 }
 
@@ -1801,13 +1808,17 @@ async function publishSharedTemplate(flat){
       const r = await fetch(api, { headers });
       if(r.ok){ const d = await r.json(); sha = d.sha; }
     } catch(e) {}
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(flat, null, 2))));
+    // 附发布时间戳：用于"已上线"轮询确认 + 同事端检测到有新模板
+    const payload = Object.assign({}, flat, { _publishedAt: new Date().toISOString() });
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
     const body = { message: 'update shared template (admin publish)', content };
     if(sha) body.sha = sha;
     const up = await fetch(api, { method: 'PUT', headers: Object.assign({ 'Content-Type': 'application/json' }, headers), body: JSON.stringify(body) });
     if(up.ok){
-      showToast('✓ 已发布共享模板，所有人刷新即同步');
-      sharedTemplate = flat;   // 当前页面立即生效
+      sharedTemplate = payload;            // 当前页面立即生效
+      _appliedPublishedAt = payload._publishedAt;
+      showToast('✓ 已提交发布，正在等待上线（约1分钟）…');
+      waitForSharedTemplateLive(payload._publishedAt);   // 轮询确认真正上线后再提示
     } else {
       const err = await up.json().catch(()=>({}));
       showToast('发布失败：' + (err.message || ('HTTP ' + up.status)));
@@ -1815,6 +1826,63 @@ async function publishSharedTemplate(flat){
   } catch(e){
     showToast('发布失败：网络错误');
   }
+}
+
+// 发布后轮询线上 shared-template.json，确认 CDN 已能提供新版本再提示 admin
+async function waitForSharedTemplateLive(ts){
+  const deadline = Date.now() + 150000;   // 最多等 2.5 分钟
+  while(Date.now() < deadline){
+    await new Promise(r=>setTimeout(r, 6000));
+    try {
+      const res = await fetch(SHARED_TEMPLATE_FETCH + '?_t=' + Date.now(), { cache: 'no-store' });
+      if(res.ok){
+        const d = await res.json();
+        if(d && d._publishedAt === ts){ showToast('✓ 共享模板已上线，所有人刷新即同步'); return; }
+      }
+    } catch(e) {}
+  }
+  showToast('已提交，部署稍慢——同事约1~2分钟后刷新即可同步');
+}
+
+// 同事端：标签页切回前台时检测是否有更新的共享模板（不自动覆盖，避免打断正在填的报价）
+async function checkSharedTemplateUpdate(){
+  try {
+    const res = await fetch(SHARED_TEMPLATE_FETCH + '?_t=' + Date.now(), { cache: 'no-store' });
+    if(!res.ok) return;
+    const data = await res.json();
+    if(!data || data._empty) return;
+    if(!(data._v >= TEMPLATE_MIN_VERSION && data._v <= TEMPLATE_VERSION)) return;
+    if(!data._publishedAt || data._publishedAt === _appliedPublishedAt) return;
+    showSyncBanner(data);
+  } catch(e) {}
+}
+
+// 顶部横幅：检测到新模板时提示，点"立即同步"一键应用（动态创建、无表单元素，不影响模板快照）
+function showSyncBanner(data){
+  if(_syncBannerShown) return;
+  _syncBannerShown = true;
+  const bar = document.createElement('div');
+  bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10000;background:#2563eb;color:#fff;padding:10px 16px;display:flex;justify-content:center;align-items:center;gap:14px;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.25);';
+  const time = data._publishedAt ? new Date(data._publishedAt).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}) : '';
+  const label = document.createElement('span');
+  label.textContent = '📢 管理员发布了新模板' + (time ? '（' + time + '）' : '');
+  const btn = document.createElement('button');
+  btn.textContent = '立即同步';
+  btn.style.cssText = 'background:#fff;color:#2563eb;border:none;padding:4px 14px;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;';
+  btn.onclick = ()=>{
+    sharedTemplate = data;
+    _appliedPublishedAt = data._publishedAt;
+    captureDefaults();   // 内部会 applyDefaults 把新模板填到页面
+    calcAll();
+    bar.remove(); _syncBannerShown = false;
+    showToast('✓ 已同步最新共享模板');
+  };
+  const close = document.createElement('button');
+  close.textContent = '稍后';
+  close.style.cssText = 'background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);padding:4px 12px;border-radius:6px;cursor:pointer;font-size:13px;';
+  close.onclick = ()=>{ bar.remove(); _syncBannerShown = false; };
+  bar.appendChild(label); bar.appendChild(btn); bar.appendChild(close);
+  document.body.appendChild(bar);
 }
 
 // HTML 出厂初始值快照（页面加载、用户未修改前抓取，供"重置"使用）
@@ -2340,6 +2408,10 @@ loadSharedTemplate().finally(() => {
   captureDefaults();
   syncStyleUI();
   calcAll();
+});
+// 标签页切回前台时检测是否有新共享模板（同事开着页面也能收到更新提示）
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible') checkSharedTemplateUpdate();
 });
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePrintSheet(); });
 
