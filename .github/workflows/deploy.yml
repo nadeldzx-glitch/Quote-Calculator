@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Build & Deploy to GitHub Pages
 
 on:
   push:
@@ -15,14 +15,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install build deps
+        run: npm ci
+
+      - name: Build (obfuscate src -> hollow-board-deploy/index.html)
+        run: node scripts/build.mjs
+        env:
+          QUOTE_SHARED_TEMPLATE_TOKEN: ${{ secrets.QUOTE_SHARED_TEMPLATE_TOKEN }}
+
+      - name: Verify build artifact
+        run: node scripts/verify-build.mjs
+        env:
+          QUOTE_SHARED_TEMPLATE_TOKEN: ${{ secrets.QUOTE_SHARED_TEMPLATE_TOKEN }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -32,9 +48,16 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # 只部署应用目录（里面只有 index.html）
+          # 部署目录 = 构建产物 index.html + 共享模板 shared-template.json
           path: ./hollow-board-deploy
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

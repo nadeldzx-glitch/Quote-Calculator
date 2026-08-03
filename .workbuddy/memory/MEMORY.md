@@ -1,7 +1,18 @@
 # 报价计算器 — 项目状态快照
 
-> **最后更新**: 2026-07-31 v162 | **文件**: `hollow-board-deploy/index.html`
+> **最后更新**: 2026-08-03 | **唯一源码**: `src/index.html`（v164）
 > **沟通约定**: 用户用截图标注"红框/绿框"，文字说"绿色框里的去掉/改成像 XXX 那样" → 意思是**参考框**是指南，**被框的**是要改的目标；若截图中**多个同色框**，必须读图片文字区分。
+
+---
+
+## 0. 构建与部署架构（2026-08-03 起）
+
+- **源码/构建分离**：只编辑 `src/index.html`；`hollow-board-deploy/index.html` 是 CI 用 javascript-obfuscator 混淆生成的发布产物（gitignore，勿编辑勿提交）。
+- **CI**：`.github/workflows/deploy.yml` = npm ci → `scripts/build.mjs`（混淆 + 注入 Secret token）→ `scripts/verify-build.mjs`（阻断式校验）→ Pages。线上 https://nadeldzx-glitch.github.io/Quote-Calculator/
+- **token**：`GITHUB_TOKEN` 常量为占位符，CI 从仓库 Secret `QUOTE_SHARED_TEMPLATE_TOKEN` 注入（fine-grained，仅本仓库 contents:write）。源码中绝不写真实 token。
+- **共享模板全员同步**：`shared-template.json` 入库随 Pages 部署在站点根；`loadSharedTemplate()` fetch 读取（`?_t=` 穿透缓存，常量 `SHARED_TEMPLATE_FETCH`），`publishSharedTemplate()` 经 GitHub API 写回（常量 `SHARED_TEMPLATE_PATH`='hollow-board-deploy/shared-template.json'）。两常量不可混用。admin 发布会产生 "update shared template" 提交并触发重部署，属正常。
+- **混淆配置刻意保守**（renameGlobals/transformObjectKeys/controlFlowFlattening 全 false），改配置后必跑 `node scripts/smoke-diff.mjs` 验证行为一致。
+- 旧的 CloudStudio 部署方式已废弃。
 
 ---
 

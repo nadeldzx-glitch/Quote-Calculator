@@ -13,3 +13,9 @@ Thumbs.db
 
 # Local demo downloads (if recreated)
 downloaded_source/
+
+# 构建产物：由 CI 从 src/index.html 混淆生成，禁止手动编辑/提交
+hollow-board-deploy/index.html
+
+# Node
+node_modules/

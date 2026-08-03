@@ -1,8 +1,9 @@
 # 报价计算器 — 开发文档
 
-> **文件**: `index.html`（单文件，约 2862 行）| **版本**: v164 | **最后更新**: 2026-08-03
-> **部署地址**: https://f2dace729d844584ae23ed7275c41088.sh5.agentos-app.net
-> **本地路径**: `G:\WorkBuddy 存储\2026-07-29-23-12-13\hollow-board-deploy\index.html`
+> ⚠️ **2026-08-03 结构变更**：仓库已改为「源码/构建分离」。唯一可编辑源码为 **`src/index.html`**；`hollow-board-deploy/index.html` 是 CI 混淆生成的发布产物（不入库、勿编辑）。部署统一走 GitHub Actions（push main 自动混淆+部署）。**以仓库根 `AGENTS.md` 为准**，本文中 `index.html` 路径与 CloudStudio 部署方式均为历史记录。
+>
+> **文件**: `src/index.html`（单文件，约 2900 行）| **版本**: v164 | **最后更新**: 2026-08-03
+> **部署地址**: https://nadeldzx-glitch.github.io/Quote-Calculator/
 
 ---
 

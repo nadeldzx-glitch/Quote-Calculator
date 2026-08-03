@@ -1,0 +1,12 @@
+{
+  "name": "quote-calculator",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Build tooling for Quote-Calculator (obfuscate src/index.html -> hollow-board-deploy/index.html)",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "devDependencies": {
+    "javascript-obfuscator": "^4.1.0"
+  }
+}
