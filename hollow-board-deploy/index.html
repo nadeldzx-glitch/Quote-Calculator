@@ -1762,6 +1762,60 @@ const TEMPLATE_VERSION = 164;
 // ⚠️ 只有 DOM/字段结构变化（增删输入框/勾选框/id 改名）才允许 bump 版本号——
 // 纯 JS 逻辑修复不要 bump，否则用户已存模板会被误判失效！
 const TEMPLATE_MIN_VERSION = 163;
+
+// ============ 共享模板（全员同步）============
+// 共享模板存放于仓库公开文件 hollow-board-deploy/shared-template.json，
+// 随 GitHub Pages 部署，所有访问者同源拉取即同步。
+// admin 存为模板时通过 GitHub Contents API 写回该文件（需 token）。
+const GITHUB_REPO = 'nadeldzx-glitch/Quote-Calculator';
+const SHARED_TEMPLATE_PATH = 'hollow-board-deploy/shared-template.json';
+// ⚠️ 下方填入 fine-grained token（仅授权本仓库 contents:write）。
+// 该 token 会随页面源码公开（任何人查看源代码可见），与 admin 密码同理；
+// 请使用权限最小化的 token 并定期轮换。
+const GITHUB_TOKEN = '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';
+let sharedTemplate = null;   // 运行时从 shared-template.json 载入（admin 发布的全局模板）
+
+// 异步拉取共享模板（全员同步读取）。失败/为空则回退 localStorage/出厂。
+async function loadSharedTemplate(){
+  try {
+    const res = await fetch(SHARED_TEMPLATE_PATH, { cache: 'no-store' });
+    if(!res.ok) return;
+    const data = await res.json();
+    if(data && !data._empty) sharedTemplate = data;
+  } catch(e) { /* 离线或网络失败：忽略，回退本地 */ }
+}
+
+// admin 存为模板时，把模板写回仓库共享文件（触发 Pages 重新部署，全员刷新即同步）
+async function publishSharedTemplate(flat){
+  if(!GITHUB_TOKEN || GITHUB_TOKEN.indexOf('__FILL') === 0){
+    showToast('尚未配置 GitHub token，仅保存到本地');
+    return;
+  }
+  const api = 'https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + SHARED_TEMPLATE_PATH;
+  const headers = { Authorization: 'Bearer ' + GITHUB_TOKEN, Accept: 'application/vnd.github+json' };
+  try {
+    // 取现有文件 SHA（更新需要）
+    let sha;
+    try {
+      const r = await fetch(api, { headers });
+      if(r.ok){ const d = await r.json(); sha = d.sha; }
+    } catch(e) {}
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(flat, null, 2))));
+    const body = { message: 'update shared template (admin publish)', content };
+    if(sha) body.sha = sha;
+    const up = await fetch(api, { method: 'PUT', headers: Object.assign({ 'Content-Type': 'application/json' }, headers), body: JSON.stringify(body) });
+    if(up.ok){
+      showToast('✓ 已发布共享模板，所有人刷新即同步');
+      sharedTemplate = flat;   // 当前页面立即生效
+    } else {
+      const err = await up.json().catch(()=>({}));
+      showToast('发布失败：' + (err.message || ('HTTP ' + up.status)));
+    }
+  } catch(e){
+    showToast('发布失败：网络错误');
+  }
+}
+
 // HTML 出厂初始值快照（页面加载、用户未修改前抓取，供"重置"使用）
 const htmlDefaults = {};
 function captureDefaults(){
@@ -1777,9 +1831,13 @@ function captureDefaults(){
     htmlDefaults.dimType = state.dimType;
     htmlDefaults.materialType = state.materialType;
   }
-  // 优先从 localStorage 加载用户保存的模板（版本匹配才用）
+  // 优先采用 admin 发布的共享模板（全员同步）；其次本地 localStorage；再次出厂快照
   let saved = null;
-  try { saved = JSON.parse(localStorage.getItem('bh_quote_template')); } catch(e) {}
+  if(sharedTemplate && sharedTemplate._v >= TEMPLATE_MIN_VERSION && sharedTemplate._v <= TEMPLATE_VERSION){
+    saved = sharedTemplate;
+  } else {
+    try { saved = JSON.parse(localStorage.getItem('bh_quote_template')); } catch(e) {}
+  }
   // 加载所有配方的自定义价格
   try { Object.assign(materialPrices, JSON.parse(localStorage.getItem('bh_material_prices')) || {}); } catch(e) {}
   if(saved && saved._v >= TEMPLATE_MIN_VERSION && saved._v <= TEMPLATE_VERSION){
@@ -2276,9 +2334,12 @@ function showParseResult(filled, msg) {
   const el = document.getElementById(id);
   if(el) el.addEventListener('input', () => el.setAttribute('data-user-set','1'));
 });
-captureDefaults();
-syncStyleUI();
-calcAll();
+// 先异步拉取共享模板（全员同步），完成后再初始化
+loadSharedTemplate().finally(() => {
+  captureDefaults();
+  syncStyleUI();
+  calcAll();
+});
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePrintSheet(); });
 
 // ==================== 打印报价单 ====================
@@ -2804,7 +2865,9 @@ function doSaveTemplate(){
   // 同步更新内存 defaults，保证 captureDefaults 已用最新版本
   Object.assign(defaults, flat);
   document.getElementById('tplConfirm').style.display='none';
-  showToast('✓ 已存为模板（已保存到本地）');
+  showToast('✓ 已存为模板（本地已保存，正在发布共享模板…）');
+  // 发布共享模板到仓库（所有人刷新即同步）
+  publishSharedTemplate(flat);
 }
 function hideTplConfirm(){ document.getElementById('tplConfirm').style.display='none'; }
 </script>
