@@ -1768,7 +1768,8 @@ const TEMPLATE_MIN_VERSION = 163;
 // 随 GitHub Pages 部署，所有访问者同源拉取即同步。
 // admin 存为模板时通过 GitHub Contents API 写回该文件（需 token）。
 const GITHUB_REPO = 'nadeldzx-glitch/Quote-Calculator';
-const SHARED_TEMPLATE_PATH = 'hollow-board-deploy/shared-template.json';
+const SHARED_TEMPLATE_PATH = 'hollow-board-deploy/shared-template.json';  // 仓库真实路径（用于 GitHub API 写回）
+const SHARED_TEMPLATE_FETCH = 'shared-template.json';  // 部署后站点根路径（Pages 以 hollow-board-deploy 为根，故相对 fetch 用此）
 // ⚠️ 下方填入 fine-grained token（仅授权本仓库 contents:write）。
 // 该 token 会随页面源码公开（任何人查看源代码可见），与 admin 密码同理；
 // 请使用权限最小化的 token 并定期轮换。
@@ -1778,7 +1779,7 @@ let sharedTemplate = null;   // 运行时从 shared-template.json 载入（admin
 // 异步拉取共享模板（全员同步读取）。失败/为空则回退 localStorage/出厂。
 async function loadSharedTemplate(){
   try {
-    const res = await fetch(SHARED_TEMPLATE_PATH, { cache: 'no-store' });
+    const res = await fetch(SHARED_TEMPLATE_FETCH, { cache: 'no-store' });
     if(!res.ok) return;
     const data = await res.json();
     if(data && !data._empty) sharedTemplate = data;
