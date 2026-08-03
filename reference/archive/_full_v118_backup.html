@@ -1,0 +1,2524 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>报价计算器</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --primary: #2563eb;
+  --primary-light: #dbeafe;
+  --primary-dark: #1d4ed8;
+  --success: #16a34a;
+  --success-light: #dcfce7;
+  --warning: #ea580c;
+  --warning-light: #fed7aa;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  --radius: 8px;
+  --shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--gray-100);
+  color: var(--gray-800);
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* 去掉数字输入框上下调节按钮 */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ===== Parse Bar ===== */
+.parse-section {
+  max-width: 1500px;
+  margin: 14px auto 0;
+  padding: 0 14px;
+}
+.parse-row {
+  display: flex;
+  gap: 8px;
+}
+.parse-input {
+  flex: 1;
+  padding: 9px 14px;
+  border: 2px solid var(--primary);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: white;
+  color: var(--gray-800);
+}
+.parse-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
+.parse-btn {
+  padding: 9px 18px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+.parse-btn:hover { background: var(--primary-dark); }
+.img-upload-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 9px 12px; background: var(--gray-100); color: var(--gray-700);
+  border: 1px solid var(--gray-300); border-radius: 8px;
+  font-size: 16px; cursor: pointer; transition: background 0.2s;
+}
+.img-upload-btn:hover { background: var(--gray-200); }
+.parse-result {
+  margin-top: 5px;
+  font-size: 12px;
+  color: var(--gray-600);
+  min-height: 16px;
+  line-height: 1.4;
+}
+.parse-result .ok { color: var(--success); font-weight: 600; }
+.parse-result .fail { color: #dc2626; }
+.ph-examples {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--gray-400);
+}
+.ph-examples span { cursor: pointer; }
+.ph-examples span:hover { color: var(--primary); text-decoration: underline; }
+
+/* ===== Cheatsheet ===== */
+/* ===== Header ===== */
+.header {
+  background: #1e3a5f;
+  color: white;
+  padding: 12px 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.header h1 { font-size: 17px; font-weight: 700; }
+.header p { font-size: 11px; opacity: 0.8; margin-top: 1px; }
+
+/* ===== Layout ===== */
+.main-wrap {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 14px;
+  max-width: 1500px;
+  margin: 14px auto;
+  padding: 0 14px;
+  align-items: start;
+}
+.left-col { display: flex; flex-direction: column; gap: 14px; }
+.right-col { position: sticky; top: 66px; }
+
+/* ===== Module Card ===== */
+.module {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.module-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+}
+.module-header .m-num {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  flex-shrink: 0;
+}
+.mh-1 { background: #0ea5e9; }
+.mh-2 { background: #8b5cf6; }
+.mh-3 { background: #f59e0b; }
+.mh-4 { background: #10b981; }
+
+.module-body { padding: 14px 16px; }
+
+/* ===== Form ===== */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.form-grid.tight { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); }
+.fg-span2 { grid-column: span 2; }
+.fg-fill { grid-column: 1 / -1; }
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.form-group label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+.form-group label .unit {
+  font-weight: 400;
+  color: var(--gray-400);
+  font-size: 10px;
+}
+.form-control {
+  padding: 6px 8px;
+  border: 1px solid var(--gray-300);
+  border-radius: 6px;
+  font-size: 13px;
+  transition: all 0.2s;
+  background: white;
+  color: var(--gray-800);
+  font-family: inherit;
+  width: 100%;
+}
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
+}
+.form-control.auto {
+  background: #fffbeb;
+  border-color: var(--warning-light);
+  color: var(--warning);
+  font-weight: 600;
+}
+select.form-control {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 12px;
+  padding-right: 24px;
+}
+
+/* ===== Type Cards ===== */
+.type-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+.type-chip {
+  padding: 5px 11px;
+  border: 1px solid var(--gray-300);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.15s;
+  background: white;
+  color: var(--gray-600);
+}
+.type-chip:hover { border-color: var(--primary); }
+.type-chip.active { background: var(--primary); color: white; border-color: var(--primary); }
+.type-chip.sub { font-size: 12px; padding: 5px 11px; background: #fff; border-style: dashed; border-color: var(--gray-200); }
+.type-chip.sub.active { background: var(--primary); color: #fff; border-style: solid; border-color: var(--primary); }
+
+/* ===== Sub-label ===== */
+.sub-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  margin-top: 2px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+/* ===== Inline Results ===== */
+.inline-results {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--gray-200);
+}
+.ir-item {
+  background: var(--gray-50);
+  border-radius: 5px;
+  padding: 6px 10px;
+  border-left: 2px solid var(--primary);
+  min-width: 80px;
+}
+.ir-item.warn { border-left-color: var(--warning); background: #fffbeb; }
+.ir-item.ok { border-left-color: var(--success); background: var(--success-light); }
+.ir-item.info { border-left-color: var(--primary); background: var(--primary-light); }
+.ir-item .ir-label { font-size: 10px; color: var(--gray-500); margin-bottom: 1px; }
+.ir-item .ir-value { font-size: 14px; font-weight: 700; color: var(--gray-800); }
+.ir-item .ir-unit { font-size: 10px; color: var(--gray-400); }
+.ir-item.warn .ir-value { color: var(--warning); }
+.ir-item.ok .ir-value { color: var(--success); }
+.ir-item.info .ir-value { color: var(--primary); }
+
+/* ===== 计算过程（产品体量上方展示） ===== */
+.calc-process {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-top: 6px;
+  margin-bottom: 12px;
+  font-size: 11px;
+  line-height: 1.85;
+  color: var(--gray-800);
+  overflow-x: auto;
+}
+.calc-process .cp-line { white-space: nowrap; }
+.calc-process .cp-k { color: var(--gray-500); font-weight: 600; }
+.calc-process .cp-expr { color: var(--gray-800); }
+.calc-process .cp-calc { color: #475569; }
+.calc-process .cp-v { color: var(--primary); font-weight: 700; }
+.calc-process .cp-sep { color: var(--gray-400); margin: 0 4px; }
+.calc-process .cp-head { font-weight: 700; color: var(--warning); margin: 5px 0 1px; }
+
+/* ===== Checkbox Grid ===== */
+.cb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.cb-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: white;
+}
+.cb-item:hover { border-color: var(--primary); }
+.cb-item.checked { border-color: var(--success); background: var(--success-light); }
+.cb-item-wide {
+  grid-column: 1 / -1;  /* 占满整行 */
+}
+.cb-trio {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.cb-trio > .cb-item {
+  flex: 1;
+}
+.cb-item-stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.cb-item-stack .cb-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cb-item-stack .cb-row2 {
+  display: flex;
+  align-items: center;
+  padding-left: 20px;  /* 与 checkbox 对齐 */
+}
+.cb-item input[type="checkbox"] {
+  width: 14px; height: 14px;
+  accent-color: var(--success);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.cb-item .cb-text { font-size: 11px; font-weight: 500; flex: 1; line-height: 1.3; }
+.cb-item input[type="number"] {
+  width: 46px;
+  padding: 2px 5px;
+  border: 1px solid var(--gray-300);
+  border-radius: 4px;
+  font-size: 11px;
+  text-align: right;
+}
+.cb-item input[type="number"].cb-input-wide {
+  width: 92px;
+}
+.cb-item .cb-auto {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray-400);
+  background: var(--gray-100);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+.cb-item.checked .cb-auto { color: var(--success); background: white; }
+.cb-item .auto-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.cb-item .auto-tag.auto { color: #2563eb; background: #eff6ff; }
+.cb-item .auto-tag.manual { color: #b45309; background: #fef3c7; }
+.req { color: #dc2626; font-weight: 700; margin-left: 2px; }
+
+/* ===== Add Custom Checkbox Button ===== */
+.add-cb-btn {
+  padding: 5px 12px;
+  border: 1px dashed var(--primary);
+  border-radius: 6px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.add-cb-btn:hover { background: var(--primary); color: white; border-style: solid; }
+.cb-item.custom { border-style: dashed; border-color: var(--primary); }
+.cb-item.custom.checked { border-style: solid; }
+.cb-item.custom .cb-text-input {
+  font-size: 11px;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: var(--gray-800);
+  width: 100%;
+  padding: 0;
+  font-family: inherit;
+  outline: none;
+}
+.cb-item.custom .cb-text-input:focus { border-bottom: 1px dotted var(--primary); }
+.cb-item.custom .cb-del-btn {
+  font-size: 13px;
+  color: #dc2626;
+  cursor: pointer;
+  margin-left: 4px;
+  font-weight: 700;
+  opacity: 0.4;
+  transition: opacity 0.15s;
+}
+.cb-item.custom .cb-del-btn:hover { opacity: 1; }
+
+/* ===== Right Panel: Summary ===== */
+.summary-panel {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.summary-header {
+  background: #1e3a5f;
+  color: white;
+  padding: 12px 16px;
+}
+.summary-header h2 { font-size: 14px; font-weight: 700; }
+.summary-header p { font-size: 10px; opacity: 0.8; }
+
+.summary-body { padding: 14px 16px; }
+
+.flow-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-bottom: 12px;
+}
+.flow-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--gray-50);
+  position: relative;
+}
+.flow-node.active { background: var(--primary-light); }
+.flow-node .fn-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gray-300);
+  flex-shrink: 0;
+}
+.flow-node.active .fn-dot { background: var(--primary); }
+.flow-node .fn-label { font-size: 11px; color: var(--gray-500); flex: 1; }
+.flow-node .fn-value { font-size: 13px; font-weight: 700; color: var(--gray-800); }
+.flow-arrow {
+  text-align: center;
+  color: var(--gray-300);
+  font-size: 12px;
+  line-height: 1;
+  padding: 1px 0;
+  margin-left: 14px;
+}
+
+.final-box {
+  background: linear-gradient(135deg, #16a34a 0%, #059669 100%);
+  color: white;
+  border-radius: var(--radius);
+  padding: 14px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+.final-box .fb-label { font-size: 12px; opacity: 0.9; }
+.final-box .fb-value { font-size: 30px; font-weight: 800; margin: 2px 0; }
+.final-box .fb-unit { font-size: 12px; opacity: 0.8; }
+
+.quote-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.quote-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+}
+.quote-row .qr-label { font-size: 12px; color: var(--gray-600); }
+.quote-row .qr-value { font-size: 16px; font-weight: 700; color: var(--gray-800); }
+.quote-row.hl {
+  background: #fff7ed;
+  border-color: var(--warning);
+}
+.quote-row.hl .qr-label { color: #c2410c; font-weight: 600; }
+.quote-row.hl .qr-value { color: var(--warning); font-size: 18px; }
+
+.detail-table {
+  width: 100%;
+  font-size: 11px;
+  border-collapse: collapse;
+}
+.detail-table th {
+  text-align: left;
+  padding: 5px 6px;
+  color: var(--gray-500);
+  font-weight: 600;
+  border-bottom: 1px solid var(--gray-200);
+}
+.detail-table td {
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--gray-100);
+  color: var(--gray-700);
+}
+.detail-table tr:last-child td { border-bottom: none; }
+
+/* ===== Badge ===== */
+.badge {
+  display: inline-block;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 600;
+}
+.badge-auto { background: var(--warning-light); color: var(--warning); }
+
+/* ===== Reset button ===== */
+.reset-btn {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--gray-300);
+  border-radius: 6px;
+  background: white;
+  color: var(--gray-600);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.reset-btn:hover { border-color: var(--gray-400); background: var(--gray-50); }
+
+/* ===== Responsive ===== */
+@media (max-width: 1100px) {
+  .main-wrap { grid-template-columns: 1fr; }
+  .right-col { position: static; }
+}
+@media (max-width: 600px) {
+  .form-grid { grid-template-columns: 1fr 1fr; }
+  .header h1 { font-size: 15px; }
+  .main-wrap { padding: 0 10px; }
+}
+
+/* ===== 打印报价单按钮 ===== */
+.print-btn {
+  width:auto; padding:8px 16px; border:1px solid rgba(255,255,255,0.4);
+  color:white; background:#16a34a; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;
+}
+.print-btn:hover { background:#15803d; }
+
+/* ===== 打印弹窗 ===== */
+.print-overlay {
+  position: fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999;
+  display:none; align-items:flex-start; justify-content:center; padding:24px; overflow:auto;
+}
+.print-overlay.show { display:flex; }
+.auth-overlay { position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.92); backdrop-filter:blur(4px); }
+.auth-box { background:#fff; border-radius:14px; padding:28px 32px; width:min(92vw,380px); box-shadow:0 20px 60px rgba(0,0,0,.3); text-align:center; }
+.auth-box h2 { margin:0 0 4px; font-size:20px; color:#0f172a; }
+.auth-hint { font-size:12px; color:#64748b; margin:0 0 14px; }
+.auth-input { width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; margin-bottom:10px; box-sizing:border-box; }
+.auth-btn { display:block; width:100%; padding:10px; border:none; border-radius:8px; background:#16a34a; color:#fff; font-size:14px; font-weight:600; cursor:pointer; }
+.auth-btn.ghost { background:#e2e8f0; color:#475569; margin-top:8px; }
+.auth-err { color:#dc2626; font-size:12px; min-height:16px; margin-top:6px; }
+.print-sheet {
+  background:#fff; width:1123px; max-width:100%; min-height:794px; color:#111;
+  padding:28px 32px; box-shadow:0 10px 40px rgba(0,0,0,0.3); font-size:13px; line-height:1.6;
+}
+.print-sheet h1 { font-size:22px; text-align:center; margin:0 0 4px; letter-spacing:2px; }
+.print-sheet .ps-sub { text-align:center; color:#666; font-size:12px; margin-bottom:16px; }
+.print-sheet .ps-meta { display:flex; justify-content:space-between; font-size:12px; color:#444; border-bottom:1px solid #ddd; padding-bottom:8px; margin-bottom:14px; }
+.ps-section { margin-bottom:18px; }
+.ps-section h2 { font-size:15px; border-left:4px solid #2563eb; padding-left:8px; margin:0 0 10px; }
+.ps-section.verify h2 { border-left-color:#f59e0b; }
+.ps-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px 18px; }
+.ps-grid.two { grid-template-columns:1fr 1fr; }
+.ps-item { display:flex; justify-content:space-between; border-bottom:1px dotted #eee; padding:3px 0; }
+.ps-item .k { color:#555; }
+.ps-item .v { font-weight:600; }
+.ps-final { text-align:center; background:#f0f9ff; border:1px solid #bae6fd; border-radius:10px; padding:14px; margin:8px 0 4px; }
+.ps-final .pf-price { font-size:26px; font-weight:700; color:#0369a1; }
+.ps-final .pf-total { font-size:16px; font-weight:600; color:#0f172a; margin-top:4px; }
+.ps-table { width:100%; border-collapse:collapse; font-size:12px; }
+.ps-table th, .ps-table td { border:1px solid #ddd; padding:5px 8px; text-align:left; }
+.ps-table th { background:#f8fafc; }
+.ps-table td.num, .ps-table th.num { text-align:right; }
+.ps-divider { border-top:2px dashed #cbd5e1; margin:16px 0; }
+
+/* ===== 计算联 三列布局 ===== */
+.calc-trio { display:flex; gap:14px; align-items:stretch; margin-top:6px; }
+.calc-col { flex:1; min-width:0; }
+.calc-head { font-size:13px; font-weight:700; color:#0369a1; margin-bottom:6px; padding-bottom:5px; border-bottom:2px solid #0369a1; }
+.calc-list { display:flex; flex-direction:column; gap:3px; }
+.calc-row { display:flex; justify-content:space-between; font-size:12px; border-bottom:1px dotted #eee; padding:3px 0; }
+.calc-row span { color:#555; }
+.calc-row b { font-weight:600; color:#0f172a; }
+.calc-row-sub { font-size:11px; padding-left:12px; color:#64748b; border-bottom:1px dotted #f1f5f9; }
+.calc-row-sub span { color:#94a3b8; font-size:11px; }
+.calc-row-sub b { font-weight:600; color:#334155; font-size:11px; }
+.calc-step { font-size:12px; padding:4px 0; border-bottom:1px dotted #eee; color:#334155; line-height:1.5; }
+.calc-step b { color:#0369a1; font-weight:700; }
+.calc-step span { color:#94a3b8; font-size:11px; }
+.calc-subtitle { font-size:12px; font-weight:700; color:#475569; margin:8px 0 4px; padding-bottom:3px; border-bottom:1px solid #e2e8f0; }
+.calc-proc-table { width:100%; font-size:11px; border-collapse:collapse; }
+.calc-proc-table td { padding:3px 0; border-bottom:1px dotted #eee; }
+.calc-proc-table td.num { text-align:right; font-weight:600; color:#0f172a; }
+.calc-row-big { font-size:14px; padding:6px 0; border-bottom:1px solid #e2e8f0; }
+.calc-row-big b { font-size:16px; color:#be123c !important; }
+.print-sheet .calc-col:last-child .calc-head { color:#be123c; border-bottom-color:#be123c; }
+.ps-hint { font-size:11px; color:#94a3b8; text-align:center; margin-top:10px; }
+.ps-actions { text-align:center; margin-top:18px; }
+.ps-actions button { margin:0 6px; padding:9px 22px; border-radius:8px; border:1px solid #2563eb; background:#2563eb; color:#fff; cursor:pointer; font-size:13px; font-weight:600; }
+.ps-actions button.ghost { background:#fff; color:#2563eb; }
+
+/* 打印内容选择条 */
+.ps-printopts { display:flex; align-items:center; gap:6px; margin:14px 0 6px; padding:8px 10px; background:#f1f5f9; border-radius:8px; }
+.ps-opt-label { font-size:13px; color:#475569; font-weight:600; margin-right:4px; }
+.ps-opt { padding:6px 16px; border-radius:7px; border:1px solid #cbd5e1; background:#fff; color:#334155; cursor:pointer; font-size:13px; font-weight:600; transition:all .12s; }
+.ps-opt:hover { border-color:#2563eb; color:#2563eb; }
+.ps-opt.active { background:#2563eb; border-color:#2563eb; color:#fff; }
+
+/* 打印时只保留报价单本身 */
+@media print {
+  /* 默认 A4 横版 */
+  @page { size: A4 landscape; margin: 8mm; }
+  body * { visibility:hidden; }
+  .print-overlay, .print-overlay * { visibility:visible; }
+  .print-overlay { position:absolute; inset:0; background:#fff; padding:0; display:block !important; }
+  .print-sheet { box-shadow:none; width:100%; min-height:auto; padding:0; }
+  .ps-actions, .ps-hint, .ps-printopts { display:none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- 登录鉴权层 -->
+<div id="authOverlay" class="auth-overlay">
+  <div class="auth-box">
+    <h2>请先登录</h2>
+    <input type="password" id="authPwd" class="auth-input" placeholder="请输入密码" onkeydown="if(event.key==='Enter')checkAuth()">
+    <div id="authErr" class="auth-err"></div>
+    <button class="auth-btn" onclick="checkAuth()">进入报价计算器</button>
+  </div>
+</div>
+
+<!-- 存为模板确认弹窗 -->
+<div id="tplConfirm" class="auth-overlay" style="display:none;">
+  <div class="auth-box">
+    <h2>存为模板确认</h2>
+    <p>确定将当前配置存为模板吗？</p>
+    <button class="auth-btn" onclick="doSaveTemplate()">是</button>
+    <button class="auth-btn ghost" onclick="hideTplConfirm()">否</button>
+  </div>
+</div>
+
+<div class="header">
+  <div>
+    <h1>报价计算器</h1>
+  </div>
+  <div style="display:flex; gap:6px;">
+    <button class="print-btn" onclick="openPrintSheet()">🖨 打印报价单</button>
+    <button class="reset-btn admin-only" onclick="saveAsTemplate()" style="width:auto; padding:8px 14px; border-color:rgba(255,255,255,0.4); color:white; background:rgba(255,255,255,0.1);">★ 存为模板</button>
+    <button class="reset-btn" onclick="resetAll()" style="width:auto; padding:8px 16px; border-color:rgba(255,255,255,0.4); color:white; background:rgba(255,255,255,0.1);">↻ 重置</button>
+  </div>
+</div>
+
+<div class="parse-section">
+  <div class="parse-row">
+    <input type="text" id="parseInput" class="parse-input" placeholder="如：板 3 600 1000 300×200×100 普通 含税7% 钉0.5" onkeydown="if(event.key==='Enter')parseAndFill()">
+    <label class="img-upload-btn" title="上传图片识别">
+      📷<input type="file" id="imgParseInput" accept="image/*" style="display:none" onchange="ocrAndFill(this)">
+    </label>
+    <button class="parse-btn" onclick="parseAndFill()">识别填写</button>
+  </div>
+  <div id="parseResult" class="parse-result"></div>
+  <div class="ph-examples">
+    快捷示例：
+    <span onclick="fillExample('板 3 600 1000 300×200×100 普通 含税7% 钉0.5 把1.2 运200 刀模500 丝网300')">完整简写</span> ·
+    <span onclick="fillExample('纸箱 内 厚5 800 500件 400×300×200 防静电 含税7% 母10 特50 丝0.5 贴5 运费200')">防静电纸箱</span> ·
+    <span onclick="fillExample('骨架 外 3 600 1000 300×200×150 回料 含税7% 角3.4 边条 人工50')">骨架箱</span> ·
+    <span onclick="fillExample('圆盘 3厚 600克重 1000个 基重600 板厚=3')">多种写法人性化识别</span>
+  </div>
+</div>
+
+<div class="main-wrap">
+<div class="left-col">
+
+<!-- ==================== Board 1: 产品参数 ==================== -->
+<div class="module">
+  <div class="module-header mh-1">
+    <span class="m-num">1</span>
+    产品参数
+  </div>
+  <div class="module-body">
+    <div class="sub-label">产品样式</div>
+    <div class="type-row" id="s1_style_row">
+      <div class="type-chip" data-style="板材" onclick="selectStyle(this)">板材</div>
+      <div class="type-chip" data-style="箱子" onclick="selectStyle(this)">箱子</div>
+      <div class="type-chip" data-style="圆盘" onclick="selectStyle(this)">圆盘</div>
+    </div>
+
+    <div class="type-row" id="s1_box_sub_row" style="display:none; margin-top:6px;">
+      <div class="type-chip sub" data-style="纸箱式" onclick="selectStyle(this)">纸箱式</div>
+      <div class="type-chip sub" data-style="插底式" onclick="selectStyle(this)">插底式</div>
+      <div class="type-chip sub" data-style="焊底式" onclick="selectStyle(this)">焊底式</div>
+      <div class="type-chip sub" data-style="骨架箱" onclick="selectStyle(this)">骨架箱</div>
+      <div class="type-chip sub" data-style="全包式" onclick="selectStyle(this)">全包式</div>
+    </div>
+
+    <div class="type-row" id="s1_dimtype_row" style="display:none;">
+      <div class="type-chip" data-dim="外尺" onclick="selectDimType(this)">外尺</div>
+      <div class="type-chip" data-dim="内尺" onclick="selectDimType(this)">内尺</div>
+    </div>
+
+    <div class="sub-label">基础参数</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>厚度 <span class="unit">mm</span></label>
+        <input type="number" class="form-control" id="s1_thickness" value="" oninput="calcAll()" placeholder="填写">
+      </div>
+      <div class="form-group">
+        <label>克重 <span class="unit">g/㎡</span></label>
+        <input type="number" class="form-control" id="s1_weight" value="" oninput="calcAll()" placeholder="填写">
+      </div>
+      <div class="form-group">
+        <label>长 / 外直径 <span class="unit">mm</span></label>
+        <input type="number" class="form-control" id="s1_length" value="" oninput="calcAll()" placeholder="填写">
+      </div>
+      <div class="form-group">
+        <label>宽 / 内直径 <span class="unit">mm</span></label>
+        <input type="number" class="form-control" id="s1_width" value="" oninput="calcAll()" placeholder="填写">
+      </div>
+      <div class="form-group" id="s1_height_group">
+        <label>高 <span class="unit">mm</span></label>
+        <input type="number" class="form-control" id="s1_height" value="" oninput="calcAll()" placeholder="填写">
+      </div>
+      <div class="form-group" id="s1_usageRate_group">
+        <label>使用率 <span class="unit">%</span></label>
+        <input type="number" class="form-control" id="s1_usageRate" value="100" oninput="calcAll()">
+      </div>
+      <div class="form-group">
+        <label>数量 <span class="unit">个</span></label>
+        <input type="number" class="form-control" id="s1_quantity" value="" oninput="calcAll()" placeholder="填写">
+      </div>
+    </div>
+
+    <div class="sub-label">计算过程</div>
+    <div class="calc-process" id="r1_process"></div>
+
+    <div class="sub-label">产品体量</div>
+    <div class="inline-results">
+      <div class="ir-item"><div class="ir-label" id="r1_sheetL_label">板材长</div><div class="ir-value" id="r1_sheetL">300</div><div class="ir-unit">mm</div></div>
+      <div class="ir-item"><div class="ir-label" id="r1_sheetW_label">板材宽</div><div class="ir-value" id="r1_sheetW">200</div><div class="ir-unit">mm</div></div>
+      <div class="ir-item" id="r1_b2"><div class="ir-label" id="r1_sheetL2_label">板材长②</div><div class="ir-value" id="r1_sheetL2">—</div><div class="ir-unit">mm</div></div>
+      <div class="ir-item" id="r1_bw2"><div class="ir-label" id="r1_sheetW2_label">板材宽②</div><div class="ir-value" id="r1_sheetW2">—</div><div class="ir-unit">mm</div></div>
+      <div class="ir-item warn"><div class="ir-label">单产品面积</div><div class="ir-value" id="r1_area">0.060</div><div class="ir-unit">㎡</div></div>
+      <div class="ir-item warn"><div class="ir-label">总立方数</div><div class="ir-value" id="r1_volume">0.18</div><div class="ir-unit">m³</div></div>
+      <div class="ir-item warn"><div class="ir-label">总吨数</div><div class="ir-value" id="r1_tons">0.04</div><div class="ir-unit">T</div></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== Board 2: 价格计算 ==================== -->
+<div class="module">
+  <div class="module-header mh-2">
+    <span class="m-num">2</span>
+    价格计算
+  </div>
+  <div class="module-body">
+
+    <!-- 报价参数（按调整要求从「产品和报价参数」板块移入，置于价格计算顶部） -->
+    <!-- 原"是否含税" sub-label 已删除（v94）：重复标签，与下方 label 同名；标题改由"原料/板材价格计算"承担 -->
+    <div class="form-grid tight">
+      <div class="form-group">
+        <label>是否含税</label>
+        <select class="form-control" id="s1_tax" onchange="calcAll()">
+          <option value="是">是</option>
+          <option value="否">否</option>
+        </select>
+      </div>
+      <div class="form-group" id="s1_taxRate_group">
+        <label>税点 <span class="unit">%</span></label>
+        <input type="number" class="form-control" id="s1_taxRate" value="7" oninput="calcAll()">
+      </div>
+      <div class="form-group">
+        <label>是否含运</label>
+        <select class="form-control" id="s1_shipFee" onchange="calcAll()">
+          <option value="是" selected>是</option>
+          <option value="否">否</option>
+        </select>
+      </div>
+      <div class="form-group fg-fill">
+        <label>客户收货地址</label>
+        <input type="text" class="form-control" id="s1_address" placeholder="如：广东省深圳市南山区XX路XX号" oninput="calcAll()">
+      </div>
+    </div>
+
+    <!-- 原料/板材价格计算（v94 新增：在原料配方上方加此 sub-label 作为分区标题） -->
+    <div class="sub-label">原料/板材价格计算</div>
+
+    <!-- 原料配方（原「板材类型」，置于原料价格计算之上） -->
+    <div class="sub-label">原料配方</div>
+    <div class="type-row" id="s2_type_row">
+      <div class="type-chip active" data-type="普通" onclick="selectMaterialType(this)">普通</div>
+      <div class="type-chip" data-type="回料+母料" onclick="selectMaterialType(this)">回料+母料</div>
+      <div class="type-chip" data-type="新料+透明母料" onclick="selectMaterialType(this)">新料+透明母料</div>
+      <div class="type-chip" data-type="防静电" onclick="selectMaterialType(this)">防静电</div>
+      <div class="type-chip" data-type="导电" onclick="selectMaterialType(this)">导电</div>
+      <div class="type-chip" data-type="耐低温" onclick="selectMaterialType(this)">耐低温</div>
+      <div class="type-chip" data-type="阻燃" onclick="selectMaterialType(this)">阻燃</div>
+    </div>
+
+    <!-- 原料配方输入区（绿色框） -->
+    <div class="form-grid tight" id="s2_recipe_grid">
+      <div class="form-group" id="grp_newPrice" style="display:none;">
+        <label>新料 <span class="unit">元/吨</span></label>
+        <input type="number" class="form-control" id="s2_newPrice" value="9000" oninput="calcAll()">
+      </div>
+      <div class="form-group" id="grp_newRatio" style="display:none;">
+        <label>新料比例 <span class="unit">%</span></label>
+        <input type="text" class="form-control" id="s2_newRatio" value="100" readonly style="background:#f3f4f6; cursor:not-allowed;">
+      </div>
+      <div class="form-group" id="grp_masterPrice" style="display:none;">
+        <label>母料 <span class="unit">元/吨</span></label>
+        <input type="number" class="form-control" id="s2_masterPrice" value="2000" oninput="calcAll()">
+      </div>
+      <div class="form-group" id="grp_masterRatio" style="display:none;">
+        <label>母料比例 <span class="unit">%</span></label>
+        <input type="number" class="form-control" id="s2_masterRatio" value="0" oninput="calcAll()">
+      </div>
+      <div class="form-group" id="grp_specialPrice" style="display:none;">
+        <label>特殊料 <span class="unit">元/吨</span></label>
+        <input type="number" class="form-control" id="s2_specialPrice" value="0" oninput="calcAll()">
+      </div>
+      <div class="form-group" id="grp_specialRatio" style="display:none;">
+        <label>特殊料比例 <span class="unit">%</span></label>
+        <input type="number" class="form-control" id="s2_specialRatio" value="0" oninput="calcAll()">
+      </div>
+    </div>
+    <div class="form-grid tight">
+      <div class="form-group">
+        <label>固定成本 <span class="unit">元/吨</span></label>
+        <input type="number" class="form-control" id="s2_fixedCost" value="1700" oninput="calcAll()">
+      </div>
+      <div class="form-group">
+        <label>原料利润 <span class="unit">元/吨</span></label>
+        <input type="number" class="form-control" id="s2_profit" value="0" oninput="calcAll()" placeholder="0">
+      </div>
+    </div>
+
+    <!-- 2.1 计算过程（从原"原料价格计算"标题改名为"计算过程"，下移至配方输入框之后） -->
+    <div class="sub-label">计算过程</div>
+    <div class="calc-process" id="r2_process"></div>
+
+    <div class="inline-results">
+      <div class="ir-item"><div class="ir-label">原料成本</div><div class="ir-value" id="r2_materialCost">6205</div><div class="ir-unit">元/吨</div></div>
+      <div class="ir-item"><div class="ir-label">原料售价</div><div class="ir-value" id="r2_materialPrice">8256</div><div class="ir-unit">元/吨</div></div>
+      <div class="ir-item"><div class="ir-label">克重</div><div class="ir-value" id="r2_weight">600</div><div class="ir-unit">g/㎡</div></div>
+      <div class="ir-item"><div class="ir-label">平方价</div><div class="ir-value" id="r2_sqPrice">4.95</div><div class="ir-unit">元/㎡</div></div>
+      <div class="ir-item"><div class="ir-label">单产品面积</div><div class="ir-value" id="r2_area">0.060</div><div class="ir-unit">㎡</div></div>
+      <div class="ir-item warn"><div class="ir-label">板材售价（单）</div><div class="ir-value" id="r2_sheetUnitPrice">0.00</div><div class="ir-unit">元</div></div>
+      <div class="ir-item"><div class="ir-label">数量</div><div class="ir-value" id="r2_sheetQty">0</div><div class="ir-unit">个</div></div>
+      <div class="ir-item warn"><div class="ir-label">板材售价（总）</div><div class="ir-value" id="r2_sheetTotalPrice">297</div><div class="ir-unit">元</div></div>
+      <div class="ir-item warn"><div class="ir-label">板材利润率（使用率100%时）</div><div class="ir-value" id="r2_profitRate">10.5</div><div class="ir-unit">%</div></div>
+    </div>
+
+    <!-- 2.3 后加工价格计算 -->
+    <div class="sub-label">后加工价格计算 <span style="font-weight:400; color:var(--gray-400);">(勾选启用，价格可改)</span></div>
+    <div class="form-grid tight">
+      <!-- 模块3内"自动带入"的尺寸/数量/板材单价：隐藏显示，但保留 id 给 calcStep3 读取 -->
+      <div style="display:none;">
+        <div class="form-group">
+          <label>长</label>
+          <input type="number" class="form-control auto" id="s3_length" value="300" oninput="calcAll()">
+        </div>
+        <div class="form-group">
+          <label>宽</label>
+          <input type="number" class="form-control auto" id="s3_width" value="200" oninput="calcAll()">
+        </div>
+        <div class="form-group">
+          <label>高</label>
+          <input type="number" class="form-control auto" id="s3_height" value="100" oninput="calcAll()">
+        </div>
+        <div class="form-group">
+          <label>板材单价</label>
+          <input type="number" class="form-control auto" id="s3_sheetPrice" value="0.30" oninput="calcAll()">
+        </div>
+      </div>
+    </div>
+
+    <div class="cb-grid" id="cb_grid">
+      <label class="cb-item" data-key="nail">
+        <input type="checkbox" onchange="calcAll()">
+        <span class="cb-text">普通钉</span>
+        <input type="number" id="s3p_nail" value="0.5" oninput="calcAll()">
+        <span style="font-size:10px;color:#9ca3af;">元</span>
+      </label>
+      <label class="cb-item" data-key="rivet">
+        <input type="checkbox" onchange="calcAll()">
+        <span class="cb-text">铆钉</span>
+        <input type="number" id="s3p_rivet" value="1" oninput="calcAll()">
+        <span style="font-size:10px;color:#9ca3af;">元</span>
+      </label>
+      <label class="cb-item" data-key="silkprint">
+        <input type="checkbox" onchange="calcAll()">
+        <span class="cb-text">丝印(2面单色)</span>
+        <input type="number" id="s3p_silkprint" value="0.5" oninput="calcAll()">
+        <span style="font-size:10px;color:#9ca3af;">元</span>
+      </label>
+      <label class="cb-item" data-key="handle">
+        <input type="checkbox" onchange="calcAll()">
+        <span class="cb-text">把手</span>
+        <input type="number" id="s3p_handle" value="1.2" oninput="calcAll()">
+        <span style="font-size:10px;color:#9ca3af;">元</span>
+      </label>
+      <label class="cb-item" data-key="velcro">
+        <input type="checkbox" onchange="calcAll()">
+        <span class="cb-text">魔术贴(上下+4钉)</span>
+        <input type="number" id="s3p_velcro" value="5" oninput="calcAll()">
+        <span style="font-size:10px;color:#9ca3af;">元</span>
+      </label>
+    </div>
+
+    <!-- 骨架箱三合一行 -->
+    <div class="cb-trio">
+      <label class="cb-item" data-key="fibertape">
+        <input type="checkbox" onchange="calcAll()">
+        <span class="cb-text">纤维胶/魔术贴角(4角)</span>
+        <input type="number" id="s3p_fibertape" value="1.5" oninput="calcAll()">
+        <span style="font-size:10px;color:#9ca3af;">元</span>
+      </label>
+      <label class="cb-item" data-key="skeleton_corner">
+        <input type="checkbox" onchange="calcAll()">
+        <span class="cb-text">骨架箱(4个顶角)</span>
+        <input type="number" id="s3p_skeletonCorner" value="3.4" oninput="calcAll()">
+        <span style="font-size:10px;color:#9ca3af;">元</span>
+      </label>
+      <label class="cb-item cb-item-stack" data-key="skeleton_edge">
+        <div class="cb-row">
+          <input type="checkbox" onchange="calcAll()">
+          <span class="cb-text">骨架箱(上边条)</span>
+          <input type="number" id="s3_skeleton_edge" value="0" oninput="onSkeletonEdgeInput()">
+          <span style="font-size:10px;color:#9ca3af;">元</span>
+        </div>
+        <div class="cb-row2">
+          <span class="auto-tag auto" id="s3_skeleton_edge_tag">≈2×(长+宽) 自动</span>
+        </div>
+      </label>
+    </div>
+
+    <div class="cb-grid" id="cb_grid2">
+      <label class="cb-item" data-key="clip">
+        <input type="checkbox" onchange="calcAll()">
+        <span class="cb-text">卡夹(11.2×9.2cm+4钉)</span>
+        <input type="number" id="s3p_clip" value="1.5" oninput="calcAll()">
+        <span style="font-size:10px;color:#9ca3af;">元</span>
+      </label>
+      <label class="cb-item" data-key="labor">
+        <input type="checkbox" onchange="calcAll()">
+        <span class="cb-text">人工</span>
+        <input type="number" id="s3p_labor" value="0" oninput="calcAll()">
+        <span style="font-size:10px;color:#9ca3af;">元</span>
+      </label>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+      <button class="add-cb-btn" onclick="addCustomCheckbox()">+ 添加工序</button>
+      <span style="font-size:11px; color:var(--gray-400);">自定义工序可修改描述和价格</span>
+    </div>
+    <div class="cb-grid" id="cb_custom_grid"></div>
+
+    <!-- 后加工计算过程 -->
+    <div class="sub-label">计算过程</div>
+    <div class="calc-process" id="r3_process"></div>
+
+    <div class="inline-results">
+      <div class="ir-item warn"><div class="ir-label">后加工费用合计</div><div class="ir-value" id="r3_processingTotal">0.00</div><div class="ir-unit">元</div></div>
+      <div class="ir-item"><div class="ir-label">成品价格（单）</div><div class="ir-value" id="r3_productUnitPrice">0.00</div><div class="ir-unit">元</div></div>
+      <div class="ir-item"><div class="ir-label">数量</div><div class="ir-value" id="r3_quantity">0</div><div class="ir-unit">个</div></div>
+      <div class="ir-item warn"><div class="ir-label">成品价格（总）</div><div class="ir-value" id="r3_productTotalPrice">0.00</div><div class="ir-unit">元</div></div>
+    </div>
+
+    <!-- 2.4 附加费用计算 -->
+    <div class="sub-label">附加费用计算</div>
+    <div class="form-grid tight">
+      <div class="form-group">
+        <label>运费 <span class="unit">元</span></label>
+        <input type="number" class="form-control" id="s4_shipping" value="0" oninput="calcAll()">
+      </div>
+      <div class="form-group">
+        <label>刀模费 <span class="unit">元</span></label>
+        <input type="number" class="form-control" id="s4_die" value="0" oninput="calcAll()">
+      </div>
+      <div class="form-group">
+        <label>丝网费 <span class="unit">元</span></label>
+        <input type="number" class="form-control" id="s4_screen" value="0" oninput="calcAll()">
+      </div>
+      <div class="form-group fg-span2">
+        <label>零头修正（数量少于1000，需修正） <span class="unit">%</span></label>
+        <input type="number" class="form-control" id="s4_fractionAdj" value="1" oninput="calcAll()">
+      </div>
+      <div class="form-group">
+        <label>价格修正 <span class="unit">元</span></label>
+        <input type="number" class="form-control" id="s4_priceAdj" value="0" oninput="calcAll()">
+      </div>
+    </div>
+
+    <div class="sub-label">计算过程</div>
+    <div class="calc-process" id="r4_process"></div>
+
+    <div class="inline-results">
+      <div class="ir-item warn"><div class="ir-label">(运费+刀模费+丝网费)/数量</div><div class="ir-value" id="r4_perUnitExtra">0.000</div><div class="ir-unit">元/个</div></div>
+      <div class="ir-item warn"><div class="ir-label">最终报价（单）</div><div class="ir-value" id="r4_finalUnitPrice">0.30</div><div class="ir-unit">元/个</div></div>
+      <div class="ir-item info"><div class="ir-label">数量</div><div class="ir-value" id="r4_quantity">0</div><div class="ir-unit">个</div></div>
+      <div class="ir-item warn"><div class="ir-label">最终报价（总）</div><div class="ir-value" id="r4_finalTotalPrice">0.00</div><div class="ir-unit">元</div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end left-col -->
+
+<!-- ==================== Right: Summary Panel ==================== -->
+<div class="right-col">
+  <div class="summary-panel">
+    <div class="summary-header">
+      <h2>最终报价</h2>
+      <p>数据自动从左侧汇总</p>
+    </div>
+    <div class="summary-body">
+
+      <div class="quote-stack">
+
+        <div class="quote-row">
+          <div class="qr-label">是否含税</div>
+          <div class="qr-value" id="sum_taxStatus">否</div>
+        </div>
+
+        <div class="quote-row hl">
+          <div class="qr-label">最终报价（单）</div>
+          <div class="qr-value" id="sum_finalUnit">0.30 元</div>
+        </div>
+
+        <div class="quote-row">
+          <div class="qr-label">数量</div>
+          <div class="qr-value" id="sum_quantity">1000</div>
+        </div>
+
+        <div class="quote-row hl">
+          <div class="qr-label">最终报价（总）</div>
+          <div class="qr-value" id="sum_finalTotal">300 元</div>
+        </div>
+
+        <div class="quote-row hl">
+          <div class="qr-label">总体积</div>
+          <div class="qr-value" id="sum_volume">0.00 m³</div>
+        </div>
+
+        <div class="quote-row hl">
+          <div class="qr-label">总吨数</div>
+          <div class="qr-value" id="sum_tons">0.00 T</div>
+        </div>
+
+      </div>
+
+      <div style="margin-top:12px; font-size:11px; color:var(--gray-400); text-align:center;">
+        左侧修改后自动重算
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end main-wrap -->
+
+<script>
+// ==================== State ====================
+const state = {
+  style: '',
+  boxCat: false,
+  dimType: '',
+  materialType: '普通',
+  lastBoxStyle: ''   // 记住上次选过的具体箱型，切走再切回时恢复
+};
+
+// ===== 鉴权初始化 =====
+document.addEventListener('DOMContentLoaded', ()=>{
+  const overlay = document.getElementById('authOverlay');
+  if(sessionStorage.getItem('role')){ overlay.style.display='none'; applyRole(); }
+  else { overlay.style.display='flex'; }
+});
+
+const materialDefaults = {
+  '普通':         { masterRatio: 0,  specialRatio: 0,    newPrice: 9000, masterPrice: 2000, specialPrice: 0,     fixedCost: 1700 },
+  '回料+母料':    { masterRatio: 0,  specialRatio: 0,    newPrice: 4300, masterPrice: 2000, specialPrice: 0,     fixedCost: 1700 },
+  '新料+透明母料':{ masterRatio: 0,  specialRatio: 0,    newPrice: 9000, masterPrice: 3800, specialPrice: 0,     fixedCost: 1700 },
+  '防静电':       { masterRatio: 0,  specialRatio: 0,    newPrice: 9000, masterPrice: 2000, specialPrice: 10500, fixedCost: 1700 },
+  '导电':         { masterRatio: 0,  specialRatio: 0,    newPrice: 9000, masterPrice: 2000, specialPrice: 10500, fixedCost: 1700 },
+  '耐低温':       { masterRatio: 0,  specialRatio: 0,    newPrice: 9000, masterPrice: 2000, specialPrice: 14000, fixedCost: 1700 },
+  '阻燃':         { masterRatio: 0,  specialRatio: 0,    newPrice: 9000, masterPrice: 2000, specialPrice: 24000, fixedCost: 1700 }
+};
+
+// ==================== Selectors ====================
+function syncStyleUI(){
+  const boxSub = document.getElementById('s1_box_sub_row');
+  const dimRow = document.getElementById('s1_dimtype_row');
+  const boxStyles = ['纸箱式','插底式','焊底式','骨架箱','全包式'];
+  const isBoxSub = boxStyles.includes(state.style);
+  boxSub.style.display = (isBoxSub || state.boxCat) ? '' : 'none';
+  dimRow.style.display = state.boxCat ? 'flex' : 'none';
+  updateHeightVisibility();
+  // 使用率始终显示；圆盘样式下为只读计算值（readonly 由 calcStep1 控制），其余样式可编辑
+  const urGroup = document.getElementById('s1_usageRate_group');
+  if(urGroup) urGroup.style.display = '';
+  const styleChips = document.querySelectorAll('#s1_style_row .type-chip, #s1_box_sub_row .type-chip');
+  styleChips.forEach(c=>c.classList.remove('active'));
+  if(state.style){
+    const chip = document.querySelector('#s1_style_row .type-chip[data-style="'+state.style+'"], #s1_box_sub_row .type-chip[data-style="'+state.style+'"]');
+    if(chip) chip.classList.add('active');
+    if(isBoxSub){
+      const p = document.querySelector('#s1_style_row .type-chip[data-style="箱子"]');
+      if(p) p.classList.add('active');
+    }
+  } else if(state.boxCat){
+    const p = document.querySelector('#s1_style_row .type-chip[data-style="箱子"]');
+    if(p) p.classList.add('active');
+  }
+}
+
+function selectStyle(el){
+  const s = el.dataset.style;
+  const boxStyles = ['纸箱式','插底式','焊底式','骨架箱','全包式'];
+  if(s==='箱子'){
+    // 切换"箱子"大类展开；再次展开时恢复上次选过的具体箱型
+    const boxSub = document.getElementById('s1_box_sub_row');
+    const willShow = boxSub.style.display==='none';
+    if(willShow){
+      state.boxCat = true;
+      state.style = state.lastBoxStyle || '';   // 恢复上次具体箱型；无则仅高亮"箱子"大类
+    } else {
+      state.boxCat = false;
+      if(boxStyles.includes(state.style)) state.style = ''; // 收起时若已选具体箱型则清空
+    }
+    syncStyleUI();
+    calcAll();
+    return;
+  }
+  state.style = s;
+  if(boxStyles.includes(s)) state.lastBoxStyle = s;   // 记住选过的具体箱型
+  state.boxCat = boxStyles.includes(s);  // 选非箱类(板材/圆盘)时务必置 false，否则子行残留
+  syncStyleUI();
+  calcAll();
+}
+
+function selectDimType(el) {
+  el.parentElement.querySelectorAll('.type-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  state.dimType = el.dataset.dim;
+  calcAll();
+}
+
+// 仅箱类样式（纸箱式/插底式/焊底式/骨架箱/全包式）存在"高"维度；未选样式或选 板材/圆盘 时隐藏"高"
+function isHeightHidden(){
+  return !['纸箱式','插底式','焊底式','骨架箱','全包式'].includes(state.style);
+}
+function updateHeightVisibility(){
+  const g = document.getElementById('s1_height_group');
+  if(g) g.style.display = isHeightHidden() ? 'none' : '';
+}
+
+function selectMaterialType(el) {
+  document.querySelectorAll('#s2_type_row .type-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  state.materialType = el.dataset.type;
+  const d = materialDefaults[state.materialType];
+  if(!d){
+    showToast('未找到「'+state.materialType+'」的默认参数');
+    return;
+  }
+  // 比例字段始终按类型默认值（用户之前要求比例默认0）
+  document.getElementById('s2_masterRatio').value = d.masterRatio;
+  document.getElementById('s2_masterRatio').removeAttribute('data-user-set');
+  document.getElementById('s2_specialRatio').value = d.specialRatio;
+  document.getElementById('s2_specialRatio').removeAttribute('data-user-set');
+
+  // 价格字段：仅当用户未手动填过，才用类型默认值覆盖
+  const priceMap = [
+    ['s2_newPrice',    d.newPrice],
+    ['s2_masterPrice', d.masterPrice],
+    ['s2_specialPrice',d.specialPrice],
+    ['s2_fixedCost',   d.fixedCost]
+  ];
+  let preserved = 0, applied = 0;
+  priceMap.forEach(([id, defVal]) => {
+    const f = document.getElementById(id);
+    if(!f) return;
+    if(f.getAttribute('data-user-set') === '1'){
+      preserved++;
+    } else {
+      f.value = defVal;
+      applied++;
+    }
+  });
+  const tip = preserved > 0
+    ? `已切换为「${state.materialType}」：母料${d.masterRatio}% / 特殊料${d.specialRatio}%（保留${preserved}项用户填入的价格）`
+    : `已切换为「${state.materialType}」：母料${d.masterRatio}% / 特殊料${d.specialRatio}%`;
+  showToast(tip);
+  calcAll();
+}
+
+// ==================== 必填校验（已全部取消） ====================
+function getMissingRequired(){ return []; }
+
+// ==================== Master Calc ====================
+function calcAll() {
+  // 是否含税=是 时显示税点输入框，否则隐藏
+  document.getElementById('s1_taxRate_group').style.display = (document.getElementById('s1_tax').value === '是') ? '' : 'none';
+
+  // 原料配方显隐逻辑
+  const mt = state.materialType;
+  const showMaster = (mt === '普通' || mt === '回料+母料' || mt === '新料+透明母料' || mt === '防静电' || mt === '导电' || mt === '耐低温' || mt === '阻燃');
+  const showSpecial = (mt === '防静电' || mt === '导电' || mt === '耐低温' || mt === '阻燃');
+  const showNew = showMaster;  // 新料与母料同条件出现
+  document.getElementById('grp_newPrice').style.display = showNew ? '' : 'none';
+  document.getElementById('grp_newRatio').style.display = showNew ? '' : 'none';
+  document.getElementById('grp_masterPrice').style.display = showMaster ? '' : 'none';
+  document.getElementById('grp_masterRatio').style.display = showMaster ? '' : 'none';
+  document.getElementById('grp_specialPrice').style.display = showSpecial ? '' : 'none';
+  document.getElementById('grp_specialRatio').style.display = showSpecial ? '' : 'none';
+
+  // 新料比例 = 1 - 母料比例 - 特殊料比例（只读同步）
+  const nr = 100 - +val('s2_masterRatio') - +val('s2_specialRatio');
+  document.getElementById('s2_newRatio').value = fmt(nr, 1);
+  // Step 1
+  const r1 = calcStep1();
+  // Step 2
+  const r2 = calcStep2();
+  // Auto-sync to step 3
+  document.getElementById('s3_sheetPrice').value = fmt(r2.V, 2);
+  document.getElementById('s3_length').value = document.getElementById('s1_length').value;
+  document.getElementById('s3_width').value = document.getElementById('s1_width').value;
+  document.getElementById('s3_height').value = document.getElementById('s1_height').value;
+  // Step 3
+  const r3 = calcStep3();
+  // Auto-sync: 成品报价和数量直接从 Step3/Step1 取值（不再用中间输入框）
+  // Step 4
+  const r4 = calcStep4();
+  // Summary（必填已取消，始终出报价）
+  updateSummary(r1, r2, r3, r4);
+}
+
+// ==================== Step 1 ====================
+let manualUsageRate = 100;   // 非圆盘样式的手动使用率（默认100）
+let urAutoSet = false;        // 圆盘样式下使用率是否被改写为自动计算值
+
+function calcStep1() {
+  const A = +val('s1_thickness'), B = +val('s1_weight'), E = +val('s1_length'), F = +val('s1_width'), G = isHeightHidden() ? 1 : +val('s1_height'), H = +val('s1_quantity');
+  const urInput = document.getElementById('s1_usageRate');
+  let ur;
+  if(state.style==='圆盘'){
+    // 圆盘：使用率是按公式算出的结果，只读、不允许人工修改；面积直接按环面积计算，不乘使用率
+    urInput.readOnly = true; urInput.classList.add('auto');
+    ur = 1;
+  } else {
+    urInput.readOnly = false; urInput.classList.remove('auto');
+    if(urAutoSet){ urInput.value = manualUsageRate; urAutoSet = false; }  // 离开圆盘后恢复手动值
+    manualUsageRate = val('s1_usageRate') || 100;
+    ur = manualUsageRate/100;
+  }
+  let I, J, K, L, M, N, Im, Jm, Ia, Ja, Loff, Woff;
+  const proc = [];
+  const urPct = fmt(ur*100,0);
+  const processBox = document.getElementById('r1_process');
+  const b2 = document.getElementById('r1_b2'), bw2 = document.getElementById('r1_bw2');
+  function hideBoard2(){
+    text('r1_sheetL_label','板材长'); text('r1_sheetW_label','板材宽');
+    text('r1_sheetL2','—'); text('r1_sheetW2','—');
+    b2.style.display='none'; bw2.style.display='none';
+  }
+  function showBoard2(lbl1,lbl2){
+    text('r1_sheetL_label',lbl1); text('r1_sheetW_label',lbl2);
+    b2.style.display=''; bw2.style.display='';
+  }
+
+  // 未选择产品样式：返回安全零值，避免后续计算出现 NaN
+  if(!state.style){
+    text('r1_sheetL','—'); text('r1_sheetW','—'); text('r1_sheetL2','—'); text('r1_sheetW2','—');
+    text('r1_area','—'); text('r1_volume','—'); text('r1_tons','—');
+    processBox.innerHTML=''; hideBoard2();
+    return {A,B,E,F,G,H, I:0,J:0,K:0,L:0,M:0,N:0};
+  }
+  // 箱类样式未选内/外尺：清空过程展示，等用户选了再算
+  const _needDim = ['纸箱式','插底式','焊底式','骨架箱','全包式'].includes(state.style);
+  if(_needDim && !state.dimType){
+    text('r1_sheetL','—'); text('r1_sheetW','—'); text('r1_sheetL2','—'); text('r1_sheetW2','—');
+    text('r1_area','—'); text('r1_volume','—'); text('r1_tons','—');
+    processBox.innerHTML='<div class="proc-hint" style="color:#9ca3af;padding:8px;">请先选择「外尺」或「内尺」</div>';
+    hideBoard2();
+    return {A,B,E,F,G,H, I:0,J:0,K:0,L:0,M:0,N:0};
+  }
+
+  const isInner = (state.dimType==='内尺');
+  switch(state.style) {
+    case '板材':
+      I=E; J=F; K=1; L=I*J*K/1e6*ur; M=L*A*H/1e3; N=L*B*H/1e6;
+      proc.push(cpLine('板材长', '长', fmt(E,0), fmt(I,1)+' mm'));
+      proc.push(cpLine('板材宽', '宽', fmt(F,0), fmt(J,1)+' mm'));
+      proc.push(cpLine('单产品面积', '长×宽×使用率÷10⁶', fmt(E,0)+'×'+fmt(F,0)+'×'+urPct+'%÷1000000', fmt(L,3)+' ㎡'));
+      hideBoard2();
+      break;
+    case '圆盘':
+      I=E+10; J=E+10;
+      K=Math.PI*((E/2)**2-(F/2)**2)/(E*E);   // 使用率 = π×((外直径/2)² − (内直径/2)²) ÷ 外直径²  【公式计算结果，只读】
+      L=Math.PI*((E/2)**2-(F/2)**2)/1e6;      // 单产品面积 = π×((外直径/2)² − (内直径/2)²) ÷ 1e6
+      M=E*E*A*H/1e9; N=L*B*H/1e6;            // 圆盘总立方数 = 外直径²×厚度×数量÷1e9
+      urInput.value = fmt(K*100,1); urAutoSet = true;   // 回填计算得到的使用率（只读，不允许修改）
+      proc.push(cpLine('板材长', '外直径 + 10', fmt(E,0)+'+10', fmt(I,1)+' mm'));
+      proc.push(cpLine('板材宽', '外直径 + 10', fmt(E,0)+'+10', fmt(J,1)+' mm'));
+      proc.push(cpLine('使用率', '(π×(外直径/2)² − π×(内直径/2)²) ÷ 外直径²', '(π×'+fmt(E/2,1)+'²−π×'+fmt(F/2,1)+'²)÷'+fmt(E,0)+'²', fmt(K*100,1)+' %'));
+      proc.push(cpLine('单产品面积', '(π×(外直径/2)² − π×(内直径/2)²) ÷ 10⁶', '(π×'+fmt(E/2,1)+'²−π×'+fmt(F/2,1)+'²)÷1000000', fmt(L,3)+' ㎡'));
+      hideBoard2();
+      break;
+    case '纸箱式':
+      Loff = isInner ? 35 : 10; Woff = isInner ? 60 : 45;  // 板材长/宽 加放量(内尺含咬口)
+      I=F+G+Loff; J=E+F+Woff;
+      K=1; L=I*J*2*K/1e6*ur; M=L*A*1.25*H/1e3; N=L*B*H/1e6;
+      proc.push(cpLine('板材长', '宽 + 高 + '+Loff, fmt(F,0)+'+'+fmt(G,0)+'+'+Loff, fmt(I,1)+' mm'));
+      proc.push(cpLine('板材宽', '长 + 宽 + '+Woff, fmt(E,0)+'+'+fmt(F,0)+'+'+Woff, fmt(J,1)+' mm'));
+      proc.push(cpLine('单产品面积', '板材长×板材宽×2×使用率÷10⁶', fmt(I,1)+'×'+fmt(J,1)+'×2×'+urPct+'%÷1000000', fmt(L,3)+' ㎡'));
+      hideBoard2();
+      break;
+    case '插底式':
+      Loff = isInner ? 95 : 70; Woff = isInner ? 60 : 45;
+      I=F+G+Loff; J=E+F+Woff;
+      K=1; L=I*J*2*K/1e6*ur; M=L*A*1.25*H/1e3; N=L*B*H/1e6;
+      proc.push(cpLine('板材长', '宽 + 高 + '+Loff, fmt(F,0)+'+'+fmt(G,0)+'+'+Loff, fmt(I,1)+' mm'));
+      proc.push(cpLine('板材宽', '长 + 宽 + '+Woff, fmt(E,0)+'+'+fmt(F,0)+'+'+Woff, fmt(J,1)+' mm'));
+      proc.push(cpLine('单产品面积', '板材长×板材宽×2×使用率÷10⁶', fmt(I,1)+'×'+fmt(J,1)+'×2×'+urPct+'%÷1000000', fmt(L,3)+' ㎡'));
+      hideBoard2();
+      break;
+    case '焊底式':
+      Loff = isInner ? 35 : 10; Woff = isInner ? 60 : 45;
+      Im=F+G+Loff; Jm=E+F+Woff; Ia=1.5*F+G+Loff; Ja=E+F+Woff;
+      K=1; I=Im; J=Jm; L=(Im*Jm+Ia*Ja)*K/1e6*ur; M=L*A*2*H/1e3; N=L*B*H/1e6;
+      proc.push(cpHead('板材1'));
+      proc.push(cpLine('板材长①', '宽 + 高 + '+Loff, fmt(F,0)+'+'+fmt(G,0)+'+'+Loff, fmt(Im,1)+' mm'));
+      proc.push(cpLine('板材宽①', '长 + 宽 + '+Woff, fmt(E,0)+'+'+fmt(F,0)+'+'+Woff, fmt(Jm,1)+' mm'));
+      proc.push(cpHead('板材2'));
+      proc.push(cpLine('板材长②', '1.5×宽 + 高 + '+Loff, '1.5×'+fmt(F,0)+'+'+fmt(G,0)+'+'+Loff, fmt(Ia,1)+' mm'));
+      proc.push(cpLine('板材宽②', '长 + 宽 + '+Woff, fmt(E,0)+'+'+fmt(F,0)+'+'+Woff, fmt(Ja,1)+' mm'));
+      proc.push(cpLine('单产品面积', '(板材长①×板材宽① + 板材长②×板材宽②)×使用率÷10⁶', '('+fmt(Im,1)+'×'+fmt(Jm,1)+'+'+fmt(Ia,1)+'×'+fmt(Ja,1)+')×'+urPct+'%÷1000000', fmt(L,3)+' ㎡'));
+      showBoard2('板材长①','板材宽①');
+      text('r1_sheetL2', fmt(Ia,1)); text('r1_sheetW2', fmt(Ja,1));
+      break;
+    case '骨架箱':
+      Loff = isInner ? 25 : 10; Woff = isInner ? 25 : 10;
+      I=F+2*G+Loff; J=(0.5*F<G)?(E+2*G+Loff):(E+F+Woff);
+      K=1; L=I*J*K/1e6*ur; M=E*F*G*H/1e9; N=L*B*H/1e6;
+      proc.push(cpLine('板材长', '宽 + 2×高 + '+Loff, fmt(F,0)+'+2×'+fmt(G,0)+'+'+Loff, fmt(I,1)+' mm'));
+      proc.push(cpLine('板材宽', '长方向取值 '+(0.5*F<G?('长 + 2×高 + '+Loff):('长 + 宽 + '+Woff)), (0.5*F<G?(fmt(E,0)+'+2×'+fmt(G,0)+'+'+Loff):(fmt(E,0)+'+'+fmt(F,0)+'+'+Woff)), fmt(J,1)+' mm'));
+      proc.push(cpLine('单产品面积', '板材长×板材宽×使用率÷10⁶', fmt(I,1)+'×'+fmt(J,1)+'×'+urPct+'%÷1000000', fmt(L,3)+' ㎡'));
+      hideBoard2();
+      break;
+    case '全包式':
+      Loff = isInner ? 35 : 10; Woff = isInner ? 60 : 45;
+      I=2*F+G+Loff; J=E+F+Woff;
+      K=1; L=I*J*2*K/1e6*ur; M=L*A*1.25*H/1e3; N=L*B*H/1e6;
+      proc.push(cpLine('板材长', '2×宽 + 高 + '+Loff, '2×'+fmt(F,0)+'+'+fmt(G,0)+'+'+Loff, fmt(I,1)+' mm'));
+      proc.push(cpLine('板材宽', '长 + 宽 + '+Woff, fmt(E,0)+'+'+fmt(F,0)+'+'+Woff, fmt(J,1)+' mm'));
+      proc.push(cpLine('单产品面积', '板材长×板材宽×2×使用率÷10⁶', fmt(I,1)+'×'+fmt(J,1)+'×2×'+urPct+'%÷1000000', fmt(L,3)+' ㎡'));
+      hideBoard2();
+      break;
+  }
+
+  if(state.style==='骨架箱'){
+    proc.push(cpLine('总立方数', '长×宽×高×数量÷1e9', fmt(E,0)+'×'+fmt(F,0)+'×'+fmt(G,0)+'×'+fmt(H,0)+'÷1e9', fmt(M,2)+' m³'));
+  } else if(state.style==='圆盘'){
+    proc.push(cpLine('总立方数', '外直径²×厚度×数量÷1e9', fmt(E,0)+'²×'+fmt(A,1)+'×'+fmt(H,0)+'÷1e9', fmt(M,2)+' m³'));
+  } else if(state.style==='焊底式'){
+    proc.push(cpLine('总立方数', '单产品面积×厚度×2×数量÷1000', fmt(L,4)+'×'+fmt(A,1)+'×2×'+fmt(H,0)+'÷1000', fmt(M,2)+' m³'));
+  } else if(state.style==='板材'){
+    proc.push(cpLine('总立方数', '单产品面积×厚度×数量÷1000', fmt(L,4)+'×'+fmt(A,1)+'×'+fmt(H,0)+'÷1000', fmt(M,2)+' m³'));
+  } else {
+    // 纸箱式/插底式/全包式：单产品面积×厚度×1.25×数量÷1000
+    proc.push(cpLine('总立方数', '单产品面积×厚度×1.25×数量÷1000', fmt(L,4)+'×'+fmt(A,1)+'×1.25×'+fmt(H,0)+'÷1000', fmt(M,2)+' m³'));
+  }
+  proc.push(cpLine('总吨数', '单产品面积×克重×数量÷10⁶', fmt(L,4)+'×'+fmt(B,1)+'×'+fmt(H,0)+'÷1000000', fmt(N,2)+' T'));
+  text('r1_sheetL', fmt(I,1)); text('r1_sheetW', fmt(J,1));
+  text('r1_area', fmt(L,3)); text('r1_volume', fmt(M,2)); text('r1_tons', fmt(N,2));
+  processBox.innerHTML = proc.join('');
+  return {A,B,E,F,G,H,I,J,K,L,M,N,Im,Jm,Ia,Ja,ur};
+}
+
+// ==================== Step 2 ====================
+function calcStep2() {
+  const A=document.getElementById('s1_tax').value,
+    B=+val('s1_taxRate')/100,
+    E=+val('s1_weight'),
+    F=+val('s2_masterRatio')/100,
+    G=+val('s2_specialRatio')/100,
+    M=+val('s1_quantity'),
+    N=+val('s2_newPrice'), O=+val('s2_masterPrice'), P=+val('s2_specialPrice'),
+    Q=+val('s2_fixedCost'), R=+val('s2_profit');
+
+  // 单产品面积：同步自产品参数（calcStep1 运算后写入 r1_area）
+  const area = +document.getElementById('r1_area').textContent || 0;
+  let S = (A==='是') ? F*O+G*P+(1-F-G)*N : (F*O+G*P+(1-F-G)*N)*0.93;
+  let T = (A==='是') ? (Q+S+R)*(1+B) : S+Q+R;
+  const U=T*E/1e6;                  // 平方价 = 原料售价 × 克重 ÷ 1e6
+  const V = U*area;                // 板材售价（单）= 单产品面积 × 平方价
+  const W = V*M;                    // 板材售价（总）= 板材售价（单）× 数量
+  // 板材利润率（使用率100%时）：
+  // 不含税 → 原料利润/原料售价 = R/T
+  // 含税 → (原料售价×0.94−原来成本−固定成本)/原料售价 = (T×0.94−S−Q)/T
+  const numerator = (A==='是') ? (T*0.94 - S - Q) : R;
+  let X = (T !== 0) ? numerator/T : 0;
+
+  // ---- 计算过程展示 ----
+  const proc2 = [];
+  const FP = fmt(F*100,0), GP = fmt(G*100,0), RFP = fmt((1-F-G)*100,0);
+  // 原料成本
+  if(A==='是'){
+    proc2.push(cpLine('原料成本', '母料比例×母料价+特殊料比例×特殊料价+(1−母料比例−特殊料比例)×新料价',
+      FP+'%×'+fmt(O,0)+'+'+GP+'%×'+fmt(P,0)+'+'+RFP+'%×'+fmt(N,0), fmt(S,0)+' 元/吨'));
+  } else {
+    proc2.push(cpLine('原料成本', '(母料比例×母料价+特殊料比例×特殊料价+(1−母料比例−特殊料比例)×新料价)×0.93',
+      '('+FP+'%×'+fmt(O,0)+'+'+GP+'%×'+fmt(P,0)+'+'+RFP+'%×'+fmt(N,0)+')×0.93', fmt(S,0)+' 元/吨'));
+  }
+  // 原料售价
+  if(A==='是'){
+    proc2.push(cpLine('原料售价', '(固定成本+原料成本+原料利润)×(1+税率)',
+      '('+fmt(Q,0)+'+'+fmt(S,0)+'+'+fmt(R,0)+')×(1+'+fmt(B*100,0)+'%)', fmt(T,0)+' 元/吨'));
+  } else {
+    proc2.push(cpLine('原料售价', '原料成本+固定成本+原料利润',
+      fmt(S,0)+'+'+fmt(Q,0)+'+'+fmt(R,0), fmt(T,0)+' 元/吨'));
+  }
+  // 平方价
+  proc2.push(cpLine('平方价', '原料售价×克重÷1e6',
+    fmt(T,0)+'×'+fmt(E,0)+'÷1e6', fmt(U,2)+' 元/㎡'));
+  // 板材售价（单）
+  proc2.push(cpLine('板材售价（单）', '单产品面积×平方价',
+    fmt(area,4)+'×'+fmt(U,2), fmt(V,3)+' 元'));
+  // 板材售价（总）
+  proc2.push(cpLine('板材售价（总）', '板材售价（单）×数量',
+    fmt(V,3)+'×'+fmt(M,0), fmt(W,2)+' 元'));
+  // 板材利润率（使用率100%时）
+  if(A==='是'){
+    proc2.push(cpLine('板材利润率（使用率100%时）', '(原料售价×0.94−原料成本−固定成本)/原料售价',
+      '('+fmt(T,0)+'×0.94−'+fmt(S,0)+'−'+fmt(Q,0)+')÷'+fmt(T,0), fmt(X*100,2)+' %'));
+  } else {
+    proc2.push(cpLine('板材利润率（使用率100%时）', '原料利润/原料售价',
+      fmt(R,0)+'÷'+fmt(T,0), fmt(X*100,2)+' %'));
+  }
+  text('r2_process', '');  // 先清空再写入
+  document.getElementById('r2_process').innerHTML = proc2.join('');
+
+  text('r2_area',fmt(area,3));
+  text('r2_materialCost',fmt(S,0)); text('r2_materialPrice',fmt(T,0));
+  text('r2_sqPrice',fmt(U,2)); text('r2_sheetUnitPrice',fmt(V,3)); text('r2_sheetQty',fmt(M,0)); text('r2_sheetTotalPrice',fmt(W,2));
+  text('r2_profitRate',fmt(X*100,2));  // 板材利润率（使用率100%时），保留2位小数
+  text('r2_weight',fmt(E,1));  // 克重：同步自产品参数 s1_weight
+  return {A,B,area,S,T,U,V,W,X};
+}
+
+// ==================== Step 3 ====================
+function calcStep3() {
+  const A=document.getElementById('s1_tax').value, B=+val('s1_taxRate')/100,
+    C=+val('s3_length'), D=+val('s3_width'), H=+val('s3_sheetPrice');
+  const G=2*(C+D)/1e3;
+
+  // 骨架箱(上边条)：默认按 2×(长+宽) 自动算，用户手动改过则保留（可清空恢复自动）
+  const seEl = document.getElementById('s3_skeleton_edge');
+  const seTag = document.getElementById('s3_skeleton_edge_tag');
+  if(seEl && seEl.getAttribute('data-user-set') !== '1'){
+    seEl.value = fmt(2*G, 2);
+    if(seTag){ seTag.textContent = '≈2×(长+宽)='+fmt(2*G,2)+' 自动'; seTag.className = 'auto-tag auto'; }
+  }
+
+  let sum=0; const details=[];
+  document.querySelectorAll('#cb_grid .cb-item, .cb-trio .cb-item, #cb_grid2 .cb-item, #cb_custom_grid .cb-item').forEach(item=>{
+    const cb=item.querySelector('input[type="checkbox"]');
+    const key=item.dataset.key;
+    if(cb.checked){
+      const pi=item.querySelector('input[type="number"]'); const price=pi?+pi.value||0:0;
+      sum+=price;
+      // 自定义工序用 text input 获取描述，固定工序用 .cb-text span
+      const textEl = item.querySelector('.cb-text-input') || item.querySelector('.cb-text');
+      details.push({name:textEl ? (textEl.value || textEl.textContent.trim()) : key, price});
+      item.classList.add('checked');
+    } else {
+      item.classList.remove('checked');
+    }
+  });
+
+  let S=(A==='是')? H+(1+B)*sum : H+sum;
+  // 同步 r2 板材售价（单）= r2_sheetUnitPrice；成品价格（单）= 板材售价(单) + 加工费合计
+  const sheetUnitPrice = +document.getElementById('r2_sheetUnitPrice').textContent || 0;
+  const productUnitPrice = sheetUnitPrice + sum;
+
+  // 后加工计算过程（cpLine 四段式格式）
+  const proc3 = [];
+  // 后加工费用合计 = 各工序单价（工序名称）之和 = 合计金额
+  if(details.length > 0){
+    const formulaCalc = details.map(d => fmt(d.price,2)+'('+d.name+')').join('+');
+    proc3.push(cpLine('后加工费用合计', '', formulaCalc, fmt(sum,3)+' 元'));
+  } else {
+    proc3.push(cpLine('后加工费用合计', '', '0', fmt(sum,3)+' 元'));
+  }
+  // 成品价格（单）
+  proc3.push(cpLine('成品价格（单）', '板材售价（单）+后加工费用合计',
+    fmt(sheetUnitPrice,3)+'+'+fmt(sum,2), fmt(productUnitPrice,3)+' 元'));
+  // 成品价格（总）= 成品价格（单）× 数量
+  const quantity = +val('s1_quantity') || 0;
+  const productTotalPrice = productUnitPrice * quantity;
+
+  // 成品价格（总）计算过程
+  proc3.push(cpLine('成品价格（总）', '成品价格（单）×数量',
+    fmt(productUnitPrice,3)+'×'+fmt(quantity,0), fmt(productTotalPrice,2)+' 元'));
+  document.getElementById('r3_process').innerHTML = proc3.join('');
+
+  text('r3_productUnitPrice', fmt(productUnitPrice, 3));
+  text('r3_quantity', fmt(quantity, 0));
+  text('r3_productTotalPrice', fmt(productTotalPrice, 2));
+  text('r3_processingTotal',fmt(sum,3));
+  return {A,B,G,H,sum,details,S,sheetUnitPrice,productUnitPrice,quantity,productTotalPrice};
+}
+
+// 骨架箱(上边条)输入框：手动修改即标记"已填"，切回自动只需清空
+function onSkeletonEdgeInput(){
+  const el = document.getElementById('s3_skeleton_edge');
+  if(!el) return;
+  const tag = document.getElementById('s3_skeleton_edge_tag');
+  if(el.value === '' || el.value === null){
+    el.removeAttribute('data-user-set');
+    if(tag){ tag.textContent = '≈2×(长+宽) 自动'; tag.className = 'auto-tag auto'; }
+  } else {
+    el.setAttribute('data-user-set','1');
+    if(tag){ tag.textContent = '手动'; tag.className = 'auto-tag manual'; }
+  }
+  calcAll();
+}
+
+// ==================== Custom Checkbox ====================
+let customCBCounter = 0;
+const customCBList = [];   // {id, name, price, checked}
+
+function addCustomCheckbox(name, price, checked){
+  const id = 'custom_' + (++customCBCounter);
+  const _name = name || '自定义工序';
+  const _price = price || 0;
+  const _checked = checked || false;
+  customCBList.push({id, name:_name, price:_price, checked:_checked});
+  renderCustomCB(id, _name, _price, _checked);
+  calcAll();
+}
+
+function renderCustomCB(id, name, price, checked){
+  const grid = document.getElementById('cb_custom_grid');
+  const item = document.createElement('div');
+  item.className = 'cb-item custom' + (checked ? ' checked' : '');
+  item.dataset.key = id;
+  item.innerHTML = `
+    <input type="checkbox" ${checked?'checked':''} onchange="calcAll()">
+    <input type="text" class="cb-text-input" value="${name}" oninput="calcAll()" placeholder="工序名称">
+    <input type="number" value="${price}" oninput="calcAll()" style="width:50px;padding:2px 5px;border:1px solid var(--gray-300);border-radius:4px;font-size:11px;text-align:right;">
+    <span style="font-size:10px;color:#9ca3af;">元</span>
+    <span class="cb-del-btn" onclick="removeCustomCheckbox('${id}')">×</span>
+  `;
+  grid.appendChild(item);
+}
+
+function removeCustomCheckbox(id){
+  const idx = customCBList.findIndex(c=>c.id===id);
+  if(idx>=0) customCBList.splice(idx,1);
+  const item = document.querySelector('#cb_custom_grid .cb-item[data-key="'+id+'"]');
+  if(item) item.remove();
+  calcAll();
+}
+
+function getCustomCBData(){
+  // 从 DOM 读取当前状态（保存模板时用）
+  const items = document.querySelectorAll('#cb_custom_grid .cb-item');
+  return Array.from(items).map(item=>{
+    const cb = item.querySelector('input[type="checkbox"]');
+    const text = item.querySelector('.cb-text-input');
+    const price = item.querySelector('input[type="number"]');
+    return {
+      id: item.dataset.key,
+      name: text ? text.value : '',
+      price: price ? +price.value || 0 : 0,
+      checked: cb ? cb.checked : false
+    };
+  });
+}
+
+// ==================== Step 4 ====================
+function calcStep4() {
+  const A=document.getElementById('s1_tax').value, B=+val('s1_taxRate')/100,
+    C=+val('s1_quantity'),                     // 数量直接从产品参数取
+    D=+document.getElementById('r3_productUnitPrice').textContent || 0,  // 成品报价直接从后加工结果取
+    E=document.getElementById('s1_shipFee').value==='是' ? +val('s4_shipping') : 0,  // 是否含运:否→运费不计入
+    F=+val('s4_die'), Fa=+val('s4_screen'),
+    G=+val('s4_fractionAdj')/100, H=+val('s4_priceAdj');
+
+  // 刀模费 + 丝网费 一起计入一次性分摊
+  const moldTotal = F + Fa;
+  let I=(A==='是')? D*(1+G)+((E+moldTotal)/C+H)*(1+B) : D*(1+G)+((E+moldTotal)/C+H);
+  const J=C*I;
+
+  // 计算过程（cpLine 格式）
+  const proc4 = [];
+  // (运费+刀模费+丝网费)/数量
+  const perUnitExtraVal = (E+moldTotal)/C;
+  const extraCalc = fmt(E,2)+'+'+fmt(F,2)+'+'+fmt(Fa,2);
+  const perUnitValStr = fmt(perUnitExtraVal,3);  // 最终报价（单）中直接引用此结果
+  if(C !== 0){
+    proc4.push(cpLine('(运费+刀模费+丝网费)/数量', '('+extraCalc+')/数量',
+      '('+extraCalc+')÷'+fmt(C,0), perUnitValStr+' 元/个'));
+  } else {
+    proc4.push(cpLine('(运费+刀模费+丝网费)/数量', '', '', '0 元/个'));
+  }
+  // 最终报价（单）
+  const finalUnitFormula = (A==='是')
+    ? '成品价格(单)×(1+零头修正%)+(运费+刀模费+丝网费)/数量+价格修正)×(1+税率%)'
+    : '成品价格(单)×(1+零头修正%)+(运费+刀模费+丝网费)/数量+价格修正';
+  const finalUnitCalc = (A==='是')
+    ? fmt(D,2)+'×(1+'+fmt(G*100,0)+'%)+('+perUnitValStr+'+'+fmt(H,2)+')×(1+'+fmt(B*100,0)+'%)'
+    : fmt(D,2)+'×(1+'+fmt(G*100,0)+'%)+'+perUnitValStr+'+'+fmt(H,2);
+  proc4.push(cpLine('最终报价（单）', finalUnitFormula, finalUnitCalc, fmt(I,3)+' 元/个'));
+  // 最终报价（总）
+  proc4.push(cpLine('最终报价（总）', '最终报价(单)×数量',
+    fmt(I,3)+'×'+fmt(C,0), fmt(J,2)+' 元'));
+  document.getElementById('r4_process').innerHTML = proc4.join('');
+
+  text('r4_perUnitExtra',fmt(perUnitExtraVal,3));
+  text('r4_finalUnitPrice',fmt(I,3));
+  text('r4_quantity',fmt(C,0));
+  // 最终报价（总）保留2位小数
+  text('r4_finalTotalPrice',fmt(J,2));
+
+  return {A,B,C,D,E,F:moldTotal,Fa,G,H,I,J};
+}
+
+// ==================== Summary ====================
+function updateSummary(r1,r2,r3,r4){
+  // 未选样式 / 箱类未选 dimType：右侧汇总也清空，避免显示 0.00 误导
+  const _needDim = ['纸箱式','插底式','焊底式','骨架箱','全包式'].includes(state.style);
+  const _noData = !state.style || (_needDim && !state.dimType);
+  if(_noData){
+    text('sum_finalUnit','—');
+    text('sum_finalTotal','—');
+    text('sum_quantity','—');
+    text('sum_volume','—');
+    text('sum_tons','—');
+    text('sum_profitRate','—');
+    return;
+  }
+  text('sum_finalUnit', fmt(r4.I,3)+' 元');
+  text('sum_finalTotal', fmt(r4.J,2)+' 元');
+  text('sum_quantity', fmt(r1.H,0));
+  text('sum_taxStatus', document.getElementById('s1_tax').value);
+  text('sum_volume', fmt(r1.M,2)+' m³');
+  text('sum_tons', fmt(r1.N,2)+' T');
+  text('sum_profitRate', fmt(r2.X*100,2)+'%');
+}
+
+// ==================== Utils ====================
+function val(id){ const v=document.getElementById(id).value; return parseFloat(v)||0; }
+function text(id,t){ document.getElementById(id).textContent=t; }
+function fmt(v,d){ if(v===undefined||v===null||isNaN(v)) return d===0?'0':'0'; const f=Math.pow(10,d); return(Math.round(v*f)/f).toFixed(d); }
+// 计算过程展示辅助：k=参数名，expr=公式(带数值)，val=结果(带单位)
+// 计算过程展示：k=体量名称 / formula=计算公式(符号) / calc=计算过程(纯数字+单位) / val=结果(带单位)
+function cpLine(k, formula, calc, val){
+  const formulaPart = formula ? `<span class="cp-sep">=</span><span class="cp-expr">${formula}</span>` : '';
+  return `<div class="cp-line"><span class="cp-k">${k}</span>${formulaPart}<span class="cp-sep">=</span><span class="cp-calc">${calc}</span><span class="cp-sep">=</span><span class="cp-v">${val}</span></div>`;
+}
+function cpHead(t){ return `<div class="cp-head">${t}</div>`; }
+
+const defaults = {};
+const TEMPLATE_VERSION = 118;
+function captureDefaults(){
+  // 优先从 localStorage 加载用户保存的模板（版本匹配才用）
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem('bh_quote_template')); } catch(e) {}
+  if(saved && saved._v === TEMPLATE_VERSION){
+    Object.assign(defaults, saved);
+    applyDefaults();
+  } else {
+    // 版本不匹配或首次：用当前 HTML 初始值
+    document.querySelectorAll('input[type="number"], input[type="text"], select').forEach(el=>{
+      defaults[el.id] = el.value;
+    });
+    document.querySelectorAll('input[type="checkbox"]').forEach((el, idx)=>{
+      defaults['cb_'+idx] = el.checked;
+    });
+    defaults.style = state.style;
+    defaults.dimType = state.dimType;
+    defaults.materialType = state.materialType;
+  }
+}
+
+// 把 defaults 应用到页面（恢复 UI 状态）
+function applyDefaults(){
+  document.querySelectorAll('input[type="number"], input[type="text"], select').forEach(el=>{
+    if(defaults[el.id] !== undefined) el.value = defaults[el.id];
+  });
+  document.querySelectorAll('input[type="checkbox"]').forEach((el, idx)=>{
+    if(defaults['cb_'+idx] !== undefined) el.checked = defaults['cb_'+idx];
+  });
+  // 恢复"用户已填"的价格标记（让用户保存的价格不被类型切换覆盖）
+  const userSetList = Array.isArray(defaults._userSetPrices) ? defaults._userSetPrices : [];
+  const allPriceIds = ['s2_newPrice','s2_masterPrice','s2_specialPrice','s2_fixedCost'];
+  allPriceIds.forEach(id => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(userSetList.indexOf(id) >= 0) el.setAttribute('data-user-set', '1');
+    else el.removeAttribute('data-user-set');
+  });
+  // 后加工：重置时回归默认单价（清除手动覆盖标记），骨架箱上边条回到"2×(长+宽)自动"
+  document.querySelectorAll('#cb_grid .cb-item input[type="number"]').forEach(inp=>inp.removeAttribute('data-user-set'));
+  const seTag = document.getElementById('s3_skeleton_edge_tag');
+  if(seTag){ seTag.textContent = '≈2×(长+宽) 自动'; seTag.className = 'auto-tag auto'; }
+  // 样式选择（大类/具体箱型统一由 syncStyleUI 联动）
+  state.style = defaults.style;
+  state.boxCat = ['纸箱式','插底式','焊底式','骨架箱','全包式'].includes(defaults.style);
+  if(state.boxCat) state.lastBoxStyle = defaults.style;   // 载入时若已是具体箱型则记住
+  syncStyleUI();
+  document.querySelectorAll('#s1_dimtype_row .type-chip').forEach(c=>c.classList.remove('active'));
+  const dimChip = document.querySelector('#s1_dimtype_row .type-chip[data-dim="'+defaults.dimType+'"]');
+  if(dimChip) dimChip.classList.add('active');
+  state.dimType = defaults.dimType;
+  // 材料类型
+  document.querySelectorAll('#s2_type_row .type-chip').forEach(c=>c.classList.remove('active'));
+  const matChip = document.querySelector('#s2_type_row .type-chip[data-type="'+defaults.materialType+'"]');
+  if(matChip) matChip.classList.add('active');
+  state.materialType = defaults.materialType;
+  // 恢复自定义勾选框
+  const customGrid = document.getElementById('cb_custom_grid');
+  if(customGrid) customGrid.innerHTML = '';
+  customCBList.length = 0;
+  customCBCounter = 0;
+  if(Array.isArray(defaults._customCB)){
+    defaults._customCB.forEach(c=>{
+      customCBCounter++;
+      const id = 'custom_' + customCBCounter;
+      customCBList.push({id, name:c.name, price:c.price, checked:c.checked});
+      renderCustomCB(id, c.name, c.price, c.checked);
+    });
+  }
+}
+
+function resetAll(){
+  applyDefaults();
+  // 清空智能识别框和提示
+  const parseInput = document.getElementById('parseInput');
+  if(parseInput) parseInput.value = '';
+  const parseResult = document.getElementById('parseResult');
+  if(parseResult) parseResult.innerHTML = '';
+  calcAll();
+  showToast('已重置为初始模板');
+}
+
+function showToast(msg){
+  let t = document.getElementById('toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#16a34a;color:white;padding:10px 24px;border-radius:8px;font-size:14px;z-index:9999;box-shadow:0 2px 8px rgba(0,0,0,0.2);opacity:0;transition:opacity 0.3s;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.style.opacity = '0'; }, 2000);
+}
+
+// ==================== Parse & Auto-Fill ====================
+function fillExample(text) {
+  document.getElementById('parseInput').value = text;
+  parseAndFill();
+}
+
+function parseAndFill() {
+  const raw = document.getElementById('parseInput').value.trim();
+  if(!raw) { showParseResult([], '请输入内容'); return; }
+
+  // 统一文本：中文标点→空格，全角→半角，压缩空格
+  let t = raw
+    .replace(/[，,、；;\n\r\t]/g, ' ')
+    .replace(/[：:]/g, ':')
+    .replace(/[（）()]/g, ' ')
+    .replace(/\s+/g, ' ');
+  let filled = [];
+  let work = ' ' + t + ' '; // 工作副本，匹配后移除已消费部分
+  const done = new Set();   // 记录已填写的字段类型
+
+  // 工具函数：正则匹配并从 work 中移除
+  function take(re) {
+    const m = work.match(re);
+    if(m) { work = work.replace(m[0], ' '); return m; }
+    return null;
+  }
+  // 工具函数：纯字符串匹配并移除
+  function takeStr(s) {
+    const idx = work.indexOf(s);
+    if(idx >= 0) { work = work.substring(0, idx) + ' ' + work.substring(idx + s.length); return true; }
+    return false;
+  }
+  function has(s) { return work.indexOf(s) >= 0; }
+
+  // === 1. 尺寸（最先匹配，避免数字被其他规则吞掉）===
+  // 3 维: 300×200×100 → 长×宽×高
+  let dm = take(/(\d+(?:\.\d+)?)\s*[×xX\*]\s*(\d+(?:\.\d+)?)\s*[×xX\*]\s*(\d+(?:\.\d+)?)/);
+  if(dm) {
+    setVal('s1_length', dm[1]); setVal('s1_width', dm[2]); setVal('s1_height', dm[3]);
+    filled.push('尺寸:'+dm[1]+'×'+dm[2]+'×'+dm[3]);
+  } else {
+    // 2 维: 300×200 → 长×宽
+    let dm2 = take(/(\d+(?:\.\d+)?)\s*[×xX\*]\s*(\d+(?:\.\d+)?)/);
+    if(dm2) {
+      setVal('s1_length', dm2[1]); setVal('s1_width', dm2[2]);
+      filled.push('尺寸:'+dm2[1]+'×'+dm2[2]+'(长×宽)');
+    } else {
+      // 关键词: 长300 宽200 高100
+      let m = take(/(?:长|外直径)\s*:?\s*(\d+(?:\.\d+)?)/);
+      if(m) { setVal('s1_length', m[1]); filled.push('长:'+m[1]); }
+      m = take(/(?:宽|内直径)\s*:?\s*(\d+(?:\.\d+)?)/);
+      if(m) { setVal('s1_width', m[1]); filled.push('宽:'+m[1]); }
+      m = take(/高\s*:?\s*(\d+(?:\.\d+)?)/);
+      if(m) { setVal('s1_height', m[1]); filled.push('高:'+m[1]); }
+    }
+  }
+
+  // === 3. 产品样式（支持简写，长词优先）===
+  const styleMap = [
+    ['纸箱式', '纸箱式'], ['纸箱', '纸箱式'], ['纸板', '纸箱式'],
+    ['插底式', '插底式'], ['插底', '插底式'],
+    ['焊底式', '焊底式'], ['焊底', '焊底式'],
+    ['骨架箱', '骨架箱'], ['骨架', '骨架箱'], ['骨架式', '骨架箱'],
+    ['全包式', '全包式'], ['全包', '全包式'],
+    ['圆盘', '圆盘'], ['圆盘式', '圆盘'],
+    ['板材', '板材'], ['板式', '板材'],
+    ['圆', '圆盘'],
+    ['板', '板材'],
+  ];
+  for(let [key, val] of styleMap) {
+    if(!has(key)) continue;
+    // 骨架箱：排除"骨架箱顶角""骨架箱边条"
+    if((key === '骨架箱' || key === '骨架') && work.match(/骨架箱?[顶边条角]/)) continue;
+    // 圆：避免匹配"圆盘"（已检查）或数字后跟"圆"（货币）
+    if(key === '圆' && (has('圆盘') || work.match(/\d圆/))) continue;
+    // 板：避免匹配"板材"（已检查）
+    if(key === '板' && has('板材')) continue;
+    takeStr(key);
+    clickStyle(val);
+    filled.push('样式:'+val);
+    break;
+  }
+
+  // === 4. 尺寸类型（支持简写"内""外"）===
+  if(has('内尺')) { takeStr('内尺'); clickDimType('内尺'); filled.push('内尺'); }
+  else if(has('外尺')) { takeStr('外尺'); clickDimType('外尺'); filled.push('外尺'); }
+  else if(work.match(/\s内(?![尺径])/)) { take(/内(?![尺径])/); clickDimType('内尺'); filled.push('内尺'); }
+  else if(work.match(/\s外(?![尺径])/)) { take(/外(?![尺径])/); clickDimType('外尺'); filled.push('外尺'); }
+
+  // === 5. 材料类型（长词优先，支持简写）===
+  if(take(/新料?\+?透明母料|透明母料|透明/)) { clickMatType('新料+透明母料'); filled.push('材料:新料+透明母料'); }
+  else if(take(/回料?\+?母料|回料母料|回料/)) { clickMatType('回料+母料'); filled.push('材料:回料+母料'); }
+  else if(takeStr('防静电')) { clickMatType('防静电'); filled.push('材料:防静电'); }
+  else if(takeStr('导电')) { clickMatType('导电'); filled.push('材料:导电'); }
+  else if(take(/耐低温|耐寒/)) { clickMatType('耐低温'); filled.push('材料:耐低温'); }
+  else if(takeStr('阻燃')) { clickMatType('阻燃'); filled.push('材料:阻燃'); }
+  else if(take(/普通(?!钉)/)) { clickMatType('普通'); filled.push('材料:普通'); }
+
+  // === 6. 厚度（正序"厚3" + 反序"3厚" + "3mm" + "板厚3"）===
+  m = take(/(?<!\d)(?:板厚|厚度|厚)\s*[:：=]?\s*(\d+(?:\.\d+)?)\s*(?:mm|MM|毫米)?/);
+  if(!m) m = take(/(\d+(?:\.\d+)?)\s*(?:mm|MM|毫米)(?=\s|$)/);
+  if(!m) m = take(/(\d+(?:\.\d+)?)\s*厚/);
+  if(m) { setVal('s1_thickness', m[1]); filled.push('厚度:'+m[1]); done.add('thickness'); }
+
+  // === 7. 克重（正序"克重600" + 反序"600克" + "克600" + "基重600" + "600gsm"）===
+  m = take(/(?:克重|基重)\s*[:：]?\s*(\d+(?:\.\d+)?)/);
+  if(!m) m = take(/(\d+(?:\.\d+)?)\s*(?:g\/㎡|g\/m2|gsm|GSM|g)(?!材)/);
+  if(!m) m = take(/(?<!\d)克\s*[:：]?\s*(\d+(?:\.\d+)?)/);
+  if(m) { setVal('s1_weight', m[1]); filled.push('克重:'+m[1]); done.add('weight'); }
+
+  // === 8. 数量（支持 个/件/只/pcs 与 量:1000 / 数量:1000）===
+  m = take(/(?:数量|总数)\s*[:：]?\s*(\d+(?:\.\d+)?)/);
+  if(!m) m = take(/量\s*[:：]?\s*(\d+(?:\.\d+)?)/);
+  if(!m) m = take(/(\d+(?:\.\d+)?)\s*(?:个|件|只|pcs|PCS|片)/);
+  if(m) { setVal('s1_quantity', m[1]); filled.push('数量:'+m[1]); done.add('quantity'); }
+
+  // === 9. 含税+税点（复合"含税7%"优先，再独立税点）===
+  m = take(/含税\s*:?\s*(\d+(?:\.\d+)?)\s*%?/);
+  if(m) {
+    setSelect('s1_tax', '是');
+    setVal('s1_taxRate', m[1]);
+    filled.push('含税 税点:'+m[1]+'%');
+  } else if(take(/不含税|无税/)) {
+    setSelect('s1_tax', '否');
+    filled.push('不含税');
+  } else if(takeStr('含税')) {
+    setSelect('s1_tax', '是');
+    filled.push('含税');
+  }
+  // 独立税点（"税7""税点7"）
+  m = take(/(?:税点|税率|税)\s*:?\s*(\d+(?:\.\d+)?)\s*%?/);
+  if(m) { setVal('s1_taxRate', m[1]); filled.push('税点:'+m[1]+'%'); }
+
+  // === 10. 母料比例（支持"母33""母料33"）===
+  m = take(/(?:母料比例|母料|母)\s*:?\s*(\d+(?:\.\d+)?)\s*%?/);
+  if(m) { setVal('s2_masterRatio', m[1]); filled.push('母料:'+m[1]+'%'); done.add('masterRatio'); }
+
+  // === 11. 特殊料比例（支持"特50""特殊料50"）===
+  m = take(/(?:特殊料比例|特殊料|特殊|特)\s*:?\s*(\d+(?:\.\d+)?)\s*%?/);
+  if(m) { setVal('s2_specialRatio', m[1]); filled.push('特殊料:'+m[1]+'%'); done.add('specialRatio'); }
+
+  // === 11.5 % 符号兜底：未带关键词的裸 % 数字 → 母料比例 ===
+  if(!done.has('masterRatio')) {
+    let pm = take(/(\d+(?:\.\d+)?)\s*%/);
+    if(pm) { setVal('s2_masterRatio', pm[1]); filled.push('母料:'+pm[1]+'%(%)'); done.add('masterRatio'); }
+  }
+
+  // === 12. 新料价格 ===
+  m = take(/(?:新料价格|新料)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { setVal('s2_newPrice', m[1]); filled.push('新料:'+m[1]); }
+
+  // === 13. 母料价格 ===
+  m = take(/母料价格\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { setVal('s2_masterPrice', m[1]); filled.push('母料价:'+m[1]); }
+
+  // === 14. 特殊料价格 ===
+  m = take(/特殊料价格\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { setVal('s2_specialPrice', m[1]); filled.push('特殊料价:'+m[1]); }
+
+  // === 15. 固定成本（支持"固定1700"）===
+  m = take(/(?:固定成本|固定)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { setVal('s2_fixedCost', m[1]); filled.push('固定成本:'+m[1]); }
+
+  // === 16. 原料利润（支持"利1800"）===
+  m = take(/(?:原料利润|利润|利)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { setVal('s2_profit', m[1]); filled.push('利润:'+m[1]); }
+
+  // === 17. 使用率 ===
+  m = take(/(?:使用率)\s*:?\s*(\d+(?:\.\d+)?)\s*%?/);
+  if(m) { setVal('s1_usageRate', m[1]); filled.push('使用率:'+m[1]+'%'); }
+
+  // === 18. 加工工序（支持简写，铆钉先于打钉避免"钉"冲突）===
+  // 纤维胶/魔术贴角（先匹配，避免与"魔术贴"冲突）
+  m = take(/(?:纤维胶|魔术贴角|胶)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { checkProcess('fibertape', m[1]); filled.push('纤维胶:'+m[1]+'元'); }
+  else if(take(/(?:纤维胶|魔术贴角|胶)/)) { checkProcess('fibertape'); filled.push('纤维胶(默认)'); }
+
+  // 铆钉（先于打钉，避免"钉"匹配铆钉中的"钉"）
+  m = take(/(?:铆钉|铆)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { checkProcess('rivet', m[1]); filled.push('铆钉:'+m[1]+'元'); }
+  else if(take(/(?:铆钉|铆)/)) { checkProcess('rivet'); filled.push('铆钉(默认)'); }
+
+  // 打钉/钉子/钉
+  m = take(/(?:普通钉|打钉|钉子|钉)\s*[:：]?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { checkProcess('nail', m[1]); filled.push('打钉:'+m[1]+'元'); }
+  else if(take(/(?:普通钉|打钉|钉子|钉)/)) { checkProcess('nail'); filled.push('打钉(默认)'); }
+
+  // 丝印（印刷工艺）—— 严格匹配，必须包含"印"字，避免与"丝网"混淆
+  m = take(/(?:丝印费|丝印)\s*[:：]?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { checkProcess('silkprint', m[1]); filled.push('丝印:'+m[1]+'元'); }
+  else if(take(/(?:丝印费|丝印)/)) { checkProcess('silkprint'); filled.push('丝印(默认)'); }
+
+  // 把手
+  m = take(/(?:把手费|手把|把手)\s*[:：]?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { checkProcess('handle', m[1]); filled.push('把手:'+m[1]+'元'); }
+  else if(take(/(?:把手费|手把|把手)/)) { checkProcess('handle'); filled.push('把手(默认)'); }
+
+  // 魔术贴/贴（后面不跟"角"）
+  m = take(/魔术贴(?!角)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { checkProcess('velcro', m[1]); filled.push('魔术贴:'+m[1]+'元'); }
+  else if(take(/魔术贴(?!角)/)) { checkProcess('velcro'); filled.push('魔术贴(默认)'); }
+  else { m = take(/贴(?!角)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/); if(m) { checkProcess('velcro', m[1]); filled.push('魔术贴:'+m[1]+'元'); } else if(take(/贴(?!角)/)) { checkProcess('velcro'); filled.push('魔术贴(默认)'); } }
+
+  // 骨架箱顶角/顶角/角
+  m = take(/(?:骨架箱顶角|骨架箱角|顶角|角)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { checkProcess('skeleton_corner', m[1]); filled.push('骨架箱角:'+m[1]+'元'); }
+  else if(take(/(?:骨架箱顶角|骨架箱角|顶角|角)/)) { checkProcess('skeleton_corner'); filled.push('骨架箱角(默认)'); }
+
+  // 骨架箱边条/边条/边
+  m = take(/(?:骨架箱边条|上边条|边条|边)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { checkProcess('skeleton_edge', m[1]); filled.push('边条:'+m[1]+'元'); }
+  else if(take(/(?:骨架箱边条|上边条|边条|边)/)) { checkProcess('skeleton_edge'); filled.push('边条(默认)'); }
+
+  // 卡夹/夹
+  m = take(/(?:卡夹|夹)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { checkProcess('clip', m[1]); filled.push('卡夹:'+m[1]+'元'); }
+  else if(take(/(?:卡夹|夹)/)) { checkProcess('clip'); filled.push('卡夹(默认)'); }
+
+  // 人工
+  m = take(/(?:人工费|人工)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { checkProcess('labor', m[1]); filled.push('人工:'+m[1]+'元'); }
+  else if(take(/(?:人工费|人工)/)) { checkProcess('labor'); filled.push('人工(默认)'); }
+
+  // === 19. 附加费用计算（支持简写）===
+  m = take(/(?:运费|运)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { setVal('s4_shipping', m[1]); filled.push('运费:'+m[1]); }
+
+  // 刀模费 / 丝网费 —— 严格匹配，分别落到两个字段
+  // 1) 刀模（模版/刀版/刀线）
+  m = take(/(?:刀模费|刀版费|模版费|刀模|刀版|模版|刀线|刀)\s*[:：]?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { setVal('s4_die', m[1]); filled.push('刀模费:'+m[1]); }
+
+  // 2) 丝网 —— 必须带"网"字（不含"印"字），避免与"丝印"（印刷工艺）混淆
+  m = take(/(?:丝网费|丝网)\s*[:：]?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { setVal('s4_screen', m[1]); filled.push('丝网费:'+m[1]); }
+
+  // 3) 兼容旧写法"刀+丝X" / "刀丝X" / "刀模丝网X"——按逗号或空格拆分，分别填到两个字段
+  //    仅当上面两条都未填时启用（避免重复覆盖用户已显式填好的值）
+  if(!val('s4_die') && !val('s4_screen')) {
+    m = take(/(?:刀模丝网|刀\+丝|刀丝)\s*[:：]?\s*(\d+(?:\.\d+)?)\s*元?/);
+    if(m) {
+      const total = +m[1];
+      // 经验默认值：刀模费 : 丝网费 ≈ 1 : 1（用户可在界面手动改）
+      setVal('s4_die', total/2);
+      setVal('s4_screen', total/2);
+      filled.push('刀模丝网(默认均分):'+m[1]);
+    }
+  }
+
+  m = take(/(?:零头修正|零头|零)\s*:?\s*(\d+(?:\.\d+)?)\s*%?/);
+  if(m) { setVal('s4_fractionAdj', m[1]); filled.push('零头:'+m[1]+'%'); }
+
+  m = take(/(?:价格修正|修正|修)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { setVal('s4_priceAdj', m[1]); filled.push('价格修正:'+m[1]); }
+
+  // === 20. 裸数字自动推断 ===
+  // 找出未被关键字消费的独立数字，按顺序自动填入 厚度→克重→数量
+  const bareNums = [];
+  const numRe = /(?:^|\s)(\d+(?:\.\d+)?)(?=\s|$)/g;
+  let bm;
+  while((bm = numRe.exec(work)) !== null) {
+    bareNums.push(bm[1]);
+  }
+  if(bareNums.length > 0) {
+    if(!done.has('thickness') && bareNums[0]) {
+      setVal('s1_thickness', bareNums[0]); filled.push('厚度:'+bareNums[0]+'(自动)'); bareNums.shift();
+    }
+    if(!done.has('weight') && bareNums[0]) {
+      setVal('s1_weight', bareNums[0]); filled.push('克重:'+bareNums[0]+'(自动)'); bareNums.shift();
+    }
+    if(!done.has('quantity') && bareNums[0]) {
+      setVal('s1_quantity', bareNums[0]); filled.push('数量:'+bareNums[0]+'(自动)'); bareNums.shift();
+    }
+  }
+
+  // === 17. 客户收货地址（关键词匹配 + 兜底用剩余 work）===
+  let addr = '';
+  let am = work.match(/(?:客户收货地址|收货地址|地址|收货)\s*[:：]?\s*([^\d]{3,80}?)(?=\s*[\d×xX\*]|$)/);
+  if(am) {
+    addr = am[1].trim();
+    work = work.replace(am[0], ' ');
+  } else {
+    // 兜底：取剩余 work，去掉明显残留的数字/单位
+    let rest = work.trim().replace(/\s+/g, ' ');
+    if(rest && rest.length >= 4 && !/^[\d.×xX\*%\s]+$/.test(rest) && !/(普通|含税|不含税|回料|新料|母料|防静电|导电|耐低温|阻燃)/.test(rest)) {
+      addr = rest;
+    }
+  }
+  if(addr) {
+    setVal('s1_address', addr);
+    filled.push('地址:' + addr);
+  }
+
+  calcAll();
+  showParseResult(filled);
+}
+
+function clickStyle(style) {
+  const chip = document.querySelector('.type-chip[data-style="'+style+'"]');
+  if(chip) chip.click();
+}
+function clickDimType(dim) {
+  const chip = document.querySelector('#s1_dimtype_row .type-chip[data-dim="'+dim+'"]');
+  if(chip) chip.click();
+}
+function clickMatType(type) {
+  const chip = document.querySelector('#s2_type_row .type-chip[data-type="'+type+'"]');
+  if(chip) chip.click();
+}
+function setVal(id, v) {
+  const el = document.getElementById(id);
+  if(el) el.value = v;
+}
+function setSelect(id, v) {
+  const el = document.getElementById(id);
+  if(el) el.value = v;
+}
+function checkProcess(key, price) {
+  const item = document.querySelector('#cb_grid .cb-item[data-key="'+key+'"]');
+  if(!item) return;
+  const cb = item.querySelector('input[type="checkbox"]');
+  cb.checked = true;
+  if(price !== undefined) {
+    const numInput = item.querySelector('input[type="number"]');
+    if(numInput){ numInput.value = price; numInput.setAttribute('data-user-set','1'); }
+  }
+}
+
+function showParseResult(filled, msg) {
+  const el = document.getElementById('parseResult');
+  if(msg) { el.innerHTML = '<span class="fail">'+msg+'</span>'; return; }
+  if(filled.length === 0) {
+    el.innerHTML = '<span class="fail">未识别到有效参数</span>';
+  } else {
+    el.innerHTML = '<span class="ok">✓ 已填写 '+filled.length+' 项：</span>' + filled.join(' · ');
+  }
+}
+
+// ==================== Init ====================
+// 价格字段：用户手动输入时标记为"已填"，类型切换时保留
+['s2_newPrice','s2_masterPrice','s2_specialPrice','s2_fixedCost'].forEach(id => {
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', () => el.setAttribute('data-user-set','1'));
+});
+captureDefaults();
+syncStyleUI();
+calcAll();
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closePrintSheet(); });
+
+// ==================== 打印报价单 ====================
+var _printParts = null;
+var _printOption = 'verify';
+
+function selectPrintOpt(opt){
+  _printOption = opt;
+  document.querySelectorAll('.ps-opt').forEach(b=>b.classList.toggle('active', b.dataset.opt===opt));
+  renderPrintSheet();
+}
+function renderPrintSheet(){
+  if(!_printParts) return;
+  let html = '';
+  if(_printOption==='verify' || _printOption==='all') html += _printParts.verify;
+  if(_printOption==='customer' || _printOption==='all'){
+    if(_printOption==='all') html += '<div class="ps-divider"></div>';
+    html += _printParts.customer;
+  }
+  document.getElementById('printSheetContent').innerHTML = html;
+  document.getElementById('ps_date').textContent = _printParts.dateTxt;
+}
+
+function openPrintSheet(){
+  // 先打开弹窗，保证一定能打开
+  document.getElementById('printSheetModal').classList.add('show');
+  try {
+  // 重新计算，获取最新数据
+  const r1=calcStep1(), r2=calcStep2(), r3=calcStep3(), r4=calcStep4();
+  const styleTxt = state.style;
+  const dimTxt = (state.dimType==='外尺')?'外尺':'内尺';
+  const _isBoxCat = state.style === '' && state.boxCat;
+  const _isPlateDisc = ['板材','圆盘'].includes(state.style);
+  const styleShow = _isPlateDisc ? state.style : (_isBoxCat ? '箱子' : ('箱子 '+state.style+(state.dimType ? ' / '+dimTxt : '')));
+  const profit = (+val('s2_profit'))||0;
+  const now = new Date();
+  const dateTxt = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+
+  // —— 客户版（上半部分）——
+  const customer = `
+    <div class="ps-section">
+      <h2>报价结果（客户联）</h2>
+      <div class="ps-grid two">
+        <div class="ps-item"><span class="k">产品样式</span><span class="v">${styleShow}</span></div>
+        <div class="ps-item"><span class="k">尺寸</span><span class="v">${dimShow(r1)} mm</span></div>
+        <div class="ps-item"><span class="k">数量</span><span class="v">${fmt(r1.H,0)} 个</span></div>
+      </div>
+      <div class="ps-final">
+        <div>单件最终报价</div>
+        <div class="pf-price">¥ ${fmt(r4.I,3)} <span style="font-size:14px;">元/个</span></div>
+        <div class="pf-total">大货总价 ¥ ${fmt(r4.J,2)} 元</div>
+      </div>
+    </div>`;
+
+  // —— 计算联：左中右三栏 ——
+  // 左侧：后加工工序列表行
+  let procRows = '';
+  r3.details.forEach(d=>{ procRows += `<tr><td>${d.name}</td><td class="num">${fmt(d.price,2)}</td></tr>`; });
+  if(procRows==='') procRows = '<tr><td colspan="2" style="text-align:center;color:#999;padding:4px 0;">（未勾选）</td></tr>';
+
+  // 中间：逐行计算过程
+  const taxLabel = document.getElementById('s1_tax').value === '是' ? '含税' : '不含税';
+  const taxRate = +val('s1_taxRate');
+  const shipFeeLabel = document.getElementById('s1_shipFee').value === '是' ? '含运' : '不含运';
+  const addressVal = (document.getElementById('s1_address').value || '').trim() || '—';
+  const areaVal = fmt(r1.L, 3);
+  const qty = fmt(r1.H, 0);
+  const thick = fmt(+val('s1_thickness'), 2);
+  const weightG = fmt(+val('s1_weight'), 1);
+  const dieVal = fmt(+val('s4_die'), 2);
+  const screenVal = fmt(+val('s4_screen'), 2);
+  const moldSum = (+val('s4_die')||0) + (+val('s4_screen')||0);
+  const perExtra = r1.H > 0 ? (r4.E + moldSum) / r1.H : 0;
+
+  // 板材长/宽的推导公式（按样式类型）
+  const E=+val('s1_length'), F=+val('s1_width'), G=+val('s1_height');
+  const isInner = state.dimType === '内尺';
+  const styleK = state.style||'';
+  let Loff=0, Woff=0;
+  let boardLFmla='', boardLNum='', boardWFmla='', boardWNum='';
+  let board2LFmla='', board2LNum='', board2WFmla='', board2WNum='';
+  if(styleK==='圆盘'){
+    boardLFmla='外直径 + 10'; boardLNum=fmt(E,0)+'+10';
+    boardWFmla='外直径 + 10'; boardWNum=fmt(E,0)+'+10';
+  } else if(styleK==='纸箱式'){
+    Loff = isInner?35:10; Woff = isInner?60:45;
+    boardLFmla='宽 + 高 + '+Loff; boardLNum=fmt(F,0)+'+'+fmt(G,0)+'+'+Loff;
+    boardWFmla='长 + 宽 + '+Woff; boardWNum=fmt(E,0)+'+'+fmt(F,0)+'+'+Woff;
+  } else if(styleK==='插底式'){
+    Loff = isInner?95:70; Woff = isInner?60:45;
+    boardLFmla='宽 + 高 + '+Loff; boardLNum=fmt(F,0)+'+'+fmt(G,0)+'+'+Loff;
+    boardWFmla='长 + 宽 + '+Woff; boardWNum=fmt(E,0)+'+'+fmt(F,0)+'+'+Woff;
+  } else if(styleK==='焊底式'){
+    Loff = isInner?35:10; Woff = isInner?60:45;
+    // 板材1
+    boardLFmla='宽 + 高 + '+Loff; boardLNum=fmt(F,0)+'+'+fmt(G,0)+'+'+Loff;
+    boardWFmla='长 + 宽 + '+Woff; boardWNum=fmt(E,0)+'+'+fmt(F,0)+'+'+Woff;
+    // 板材2
+    board2LFmla='1.5×宽 + 高 + '+Loff; board2LNum='1.5×'+fmt(F,0)+'+'+fmt(G,0)+'+'+Loff;
+    board2WFmla='长 + 宽 + '+Woff; board2WNum=fmt(E,0)+'+'+fmt(F,0)+'+'+Woff;
+  } else {
+    boardLFmla='—'; boardLNum='—';
+    boardWFmla='—'; boardWNum='—';
+  }
+
+  // 体积调整系数（与 calcStep1 计算保持一致）
+  let volCoef = '';
+  if(styleK==='焊底式'){ volCoef = '×2'; }
+  else if(styleK==='纸箱式' || styleK==='插底式' || styleK==='全包式'){ volCoef = '×1.25'; }
+
+  // ① 体量计算的展示块（焊底式需要显示两块板材，其他样式只显示一块）
+  // 箱类未选外尺/内尺：① 体量计算整个不渲染
+  const _printNeedDim = ['纸箱式','插底式','焊底式','骨架箱','全包式'].includes(state.style);
+  const _noDim = _printNeedDim && !state.dimType;
+  const board1Step = _noDim ? '' : `
+<div class="calc-step">${styleK==='焊底式'?'<b>板材1</b>':''}</div>
+<div class="calc-step"><span>板材长</span> = ${boardLNum} = <b>${fmt(styleK==='焊底式'?r1.Im:r1.I,1)} mm</b></div>
+<div class="calc-step"><span>板材宽</span> = ${boardWNum} = <b>${fmt(styleK==='焊底式'?r1.Jm:r1.J,1)} mm</b></div>`;
+  const board2Step = (styleK==='焊底式' && !_noDim) ? `
+<div class="calc-step"><b>板材2</b></div>
+<div class="calc-step"><span>板材长</span> = ${board2LNum} = <b>${fmt(r1.Ia,1)} mm</b></div>
+<div class="calc-step"><span>板材宽</span> = ${board2WNum} = <b>${fmt(r1.Ja,1)} mm</b></div>` : '';
+  const areaStep = _noDim ? '' : styleK==='焊底式'
+    ? `<div class="calc-step"><span>单产品面积</span> = (${fmt(r1.Im,1)}×${fmt(r1.Jm,1)} + ${fmt(r1.Ia,1)}×${fmt(r1.Ja,1)})×${fmt(r1.ur*100,0)}% = <b>${areaVal} ㎡</b></div>`
+    : styleK==='圆盘'
+      ? `<div class="calc-step"><span>单产品面积</span> = (π×(${fmt(E/2,1)})² − π×(${fmt(F/2,1)})²) ÷ 10⁶ = <b>${areaVal} ㎡</b></div>`
+      : (styleK==='纸箱式'||styleK==='插底式'||styleK==='全包式')
+        ? `<div class="calc-step"><span>单产品面积</span> = ${fmt(r1.I,1)}×${fmt(r1.J,1)}×2×${fmt(r1.ur*100,0)}%÷10⁶ = <b>${areaVal} ㎡</b></div>`
+        : styleK==='骨架箱'
+          ? `<div class optimize="calc-step"><span>单产品面积</span> = ${fmt(r1.I,1)}×${fmt(r1.J,1)}×${fmt(r1.ur*100,0)}%÷10⁶ = <b>${areaVal} ㎡</b></div>`;
+  const dimHint = _noDim ? '<div class="calc-step" style="color:#9ca3af;">（请先选择「外尺」或「内尺」）</div>' : '';
+  // 圆盘下：calcStep1 的"总立方数"公式是"外直径²×厚度×数量÷1e9"（按整圆算），不能用 areaVal(圆环面积)×thick
+  const totalCubStep = _noDim ? '' : styleK==='圆盘'
+    ? `<div class="calc-step"><span>总立方数</span> = ${fmt(E,0)}²×${thick}×${qty}÷1e9 = <b>${fmt(r1.M,2)} m³</b></div>`
+    : styleK==='骨架箱'
+      ? `<div class="calc-step"><span>总立方数</span> = ${fmt(E,0)}×${fmt(F,0)}×${fmt(G,0)}×${qty}÷1e9 = <b>${fmt(r1.M,2)} m³</b></div>`
+      : `<div class="calc-step"><span>总立方数</span> = ${areaVal}×${thick}${volCoef}×${qty}÷1000 = <b>${fmt(r1.M,2)} m³</b></div>`;
+  const totalTonStep = _noDim ? '' : `<div class="calc-step"><span>总吨数</span> = ${areaVal}×${weightG}×${qty}÷1e6 = <b>${fmt(r1.N,2)} T</b></div>`;
+
+  const calcSteps = `
+<div class="calc-step"><b>① 体量计算</b></div>
+${board1Step}${board2Step}${areaStep}${totalCubStep}${totalTonStep}${dimHint}
+<div class="calc-step"><b>② 原料/板材价格计算</b></div>
+${(()=>{
+  const taxFlag = taxLabel==='含税';
+  const FP = fmt(+val('s2_masterRatio'),0), GP = fmt(+val('s2_specialRatio'),0);
+  const RFP = fmt(100 - +val('s2_masterRatio') - +val('s2_specialRatio'),0);
+  const Np = fmt(+val('s2_newPrice'),0), Op = fmt(+val('s2_masterPrice'),0), Pp = fmt(+val('s2_specialPrice'),0);
+  const Qp = fmt(+val('s2_fixedCost'),0), Rp = fmt(+val('s2_profit'),0);
+  const costFmla = taxFlag
+    ? '母料比例×母料价+特殊料比例×特殊料价+(1−母料比例−特殊料比例)×新料价'
+    : '(母料比例×母料价+特殊料比例×特殊料价+(1−母料比例−特殊料比例)×新料价)×0.93';
+  const costNum = taxFlag
+    ? (FP+'%×'+Op+'+'+GP+'%×'+Pp+'+'+RFP+'%×'+Np)
+    : ('('+FP+'%×'+Op+'+'+GP+'%×'+Pp+'+'+RFP+'%×'+Np+')×0.93');
+  const priceFmla = taxFlag
+    ? '(固定成本+原料成本+原料利润)×(1+税率)'
+    : '原料成本+固定成本+原料利润';
+  const priceNum = taxFlag
+    ? ('('+Qp+'+'+fmt(r2.S,0)+'+'+Rp+')×(1+'+fmt(taxRate,0)+'%)')
+    : (fmt(r2.S,0)+'+'+Qp+'+'+Rp);
+  return `
+<div class="calc-step"><span>原料成本</span> = ${costNum} = <b>${fmt(r2.S,0)} 元/吨</b></div>
+<div class="calc-step"><span>原料售价</span> = ${priceNum} = <b>${fmt(r2.T,0)} 元/吨</b></div>
+<div class="calc-step"><span>板材售价（单）</span> = ${areaVal}×${weightG}×${fmt(r2.T,0)}÷1e6 = <b>${fmt(r2.V,3)} 元</b></div>`;
+})()}
+<div class="calc-step"><b>③ 后加工价格计算</b></div>
+${(()=>{
+  if(r3.details && r3.details.length>0){
+    const detailNum = r3.details.map(d=>fmt(d.price,2)+'('+d.name+')').join('+');
+    return `<div class="calc-step"><span>后加工费用合计</span> = ${detailNum} = <b>${fmt(r3.sum,3)} 元</b></div>
+<div class="calc-step"><span>成品价格（单）</span> = ${fmt(r3.sheetUnitPrice,3)}+${fmt(r3.sum,2)} = <b>${fmt(r3.productUnitPrice,3)} 元</b></div>`;
+  }
+  return `<div class="calc-step"><span>后加工费用合计</span> = 0 = <b>${fmt(r3.sum,3)} 元</b></div>
+<div class="calc-step"><span>成品价格（单）</span> = ${fmt(r3.sheetUnitPrice,3)}+${fmt(r3.sum,2)} = <b>${fmt(r3.productUnitPrice,3)} 元</b></div>`;
+})()}
+<div class="calc-step"><b>④ 附加费用计算</b></div>
+${r1.H>0 ? `<div class="calc-step"><span>(运费+刀模费+丝网费)/数量</span> = (${fmt(r4.E,2)}+${fmt(r4.F,2)}+${fmt(r4.Fa,2)})÷${qty} = <b>${fmt(perExtra, 3)} 元/个</b></div>` : `<div class="calc-step"><span>(运费+刀模费+丝网费)/数量</span> = <b>0 元/个</b></div>`}
+<div class="calc-step"><span>最终报价（单）</span> = ${r4.A==='是'?(fmt(r4.D,2)+'×(1+'+fmt(r4.G*100,0)+'%)+('+fmt(perExtra,3)+'+'+fmt(r4.H,2)+')×(1+'+fmt(r4.B*100,0)+'%)'):(fmt(r4.D,2)+'×(1+'+fmt(r4.G*100,0)+'%)+'+fmt(perExtra,3)+'+'+fmt(r4.H,2))} = <b>${fmt(r4.I,3)} 元/个</b></div>
+<div class="calc-step"><span>最终报价（总）</span> = ${fmt(r4.I,3)}×${qty} = <b>${fmt(r4.J,2)} 元</b></div>`;
+
+  const verify = `
+    <div class="ps-section verify">
+      <h2>计算联（计算过程明细）</h2>
+      <div class="calc-trio">
+
+        <!-- 左：已知条件 -->
+        <div class="calc-col calc-left">
+          <div class="calc-head">已知条件</div>
+          <div class="calc-list">
+            <div class="calc-row"><span>产品样式</span><b>${styleShow}</b></div>
+            <div class="calc-row"><span>原料配方</span><b>${state.materialType}</b></div>
+            <div class="calc-row calc-row-sub"><span>新料比例</span><b>${fmt(+val('s2_newRatio'),0)}%</b></div>
+            <div class="calc-row calc-row-sub"><span>母料比例</span><b>${fmt(+val('s2_masterRatio'),0)}%</b></div>
+            <div class="calc-row calc-row-sub"><span>特殊料比例</span><b>${fmt(+val('s2_specialRatio'),0)}%</b></div>
+            <div class="calc-row"><span>厚度</span><b>${thick} mm</b></div>
+            <div class="calc-row"><span>克重</span><b>${weightG} g/㎡</b></div>
+            <div class="calc-row"><span>尺寸</span><b>${dimShow(r1)} mm</b></div>
+            <div class="calc-row"><span>数量</span><b>${qty} 个</b></div>
+            <div class="calc-row"><span>是否含税</span><b>${taxLabel}</b></div>
+            <div class="calc-row"><span>是否含运</span><b>${shipFeeLabel}</b></div>
+            <div class="calc-row"><span>客户收货地址</span><b style="word-break:break-all;white-space:normal;">${addressVal}</b></div>
+          </div>
+          <div class="calc-subtitle">后加工工序</div>
+          <table class="calc-proc-table"><tbody>${procRows}</tbody></table>
+          <div class="calc-subtitle">附加情况</div>
+          <div class="calc-list" style="margin-top:6px">
+            <div class="calc-row"><span>运费总计</span><b>${fmt(r4.E,2)} 元</b></div>
+            <div class="calc-row"><span>刀模费</span><b>${dieVal} 元</b></div>
+            <div class="calc-row"><span>丝网费</span><b>${screenVal} 元</b></div>
+            <div class="calc-row"><span>零头修正</span><b>${fmt(r4.G*100,0)} %</b></div>
+            <div class="calc-row"><span>价格修正</span><b>${fmt(r4.H,2)} 元</b></div>
+          </div>
+        </div>
+
+        <!-- 中：计算过程 -->
+        <div class="calc-col calc-mid">
+          <div class="calc-head">计算过程</div>
+          <div class="calc-list">
+            ${calcSteps}
+          </div>
+        </div>
+
+        <!-- 右：计算结果 -->
+        <div class="calc-col calc-right">
+          <div class="calc-head">计算结果</div>
+          <div class="calc-list">
+            <div class="calc-row calc-row-big"><span>最终单价</span><b>￥${fmt(r4.I,3)} /个</b></div>
+            <div class="calc-row calc-row-big"><span>大货总价</span><b>￥${fmt(r4.J,2)}</b></div>
+            <div class="calc-row calc-row-big"><span>总体积</span><b>${fmt(r1.M,2)} m³</b></div>
+            <div class="calc-row calc-row-big"><span>总吨数</span><b>${fmt(r1.N,2)} T</b></div>
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+
+  _printParts = {customer, verify, dateTxt};
+  _printOption = 'verify';
+  document.querySelectorAll('.ps-opt').forEach(b=>b.classList.toggle('active', b.dataset.opt==='verify'));
+  renderPrintSheet();
+  } catch(e) {
+    console.error('报价单生成失败：', e);
+    document.getElementById('printSheetContent').innerHTML = '<div style="padding:30px;color:#dc2626;text-align:center;font-size:14px;">⚠ 报价单生成失败：'+(e&&e.message?e.message:e)+'<br><br>请打开浏览器开发者工具(F12)查看详细错误。</div>';
+  }
+  document.getElementById('printSheetModal').classList.add('show');
+}
+function closePrintSheet(){ document.getElementById('printSheetModal').classList.remove('show'); }
+function doPrintSheet(){ renderPrintSheet(); window.print(); }
+function exportExcel(){
+  const r1=calcStep1(), r2=calcStep2(), r3=calcStep3(), r4=calcStep4();
+  const dimTxt = (state.dimType==='外尺')?'外尺':'内尺';
+  const _isBoxCat = state.style==='' && state.boxCat;
+  const _isPlateDisc = ['板材','圆盘'].includes(state.style);
+  const styleShow = _isPlateDisc ? state.style : (_isBoxCat ? '箱子' : state.style + (state.dimType ? ' / '+dimTxt : ''));
+  const size = dimShow(r1)+' mm';
+  const now = new Date();
+  const dateTxt = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  const rows = [
+    ['项目','数值'],
+    ['产品样式', styleShow],
+    ['材料类型', state.materialType],
+    ['厚度 (mm)', fmt(r1.A,2)],
+    ['克重 (g/㎡)', fmt(r1.B,1)],
+    ['尺寸', size],
+    ['数量 (个)', fmt(r1.H,0)],
+    ['单件最终报价 (元/个)', fmt(r4.I,3)],
+    ['大货总价 (元)', fmt(r4.J,2)],
+    ['总体积 (m³)', fmt(r1.M,3)],
+    ['总吨数 (T)', fmt(r1.N,2)],
+    ['原料成本 (元/吨)', fmt(r2.T,0)],
+    ['成品单价 (元)', fmt(r3.sheetUnitPrice,3)]
+  ];
+  let html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><title>报价单</title></head><body><table border="1" cellspacing="0" cellpadding="6" style="font-family:Microsoft YaHei,sans-serif;font-size:13px;">';
+  rows.forEach(r=>{ html += '<tr><td style="font-weight:600;background:#f8fafc;text-align:right;">'+r[0]+'</td><td>'+r[1]+'</td></tr>'; });
+  html += '</table></body></html>';
+  const blob = new Blob([html],{type:'application/vnd.ms-excel'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='报价单_'+styleShow+'_'+dateTxt+'.xls'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+// ===== 鉴权 / 权限 =====
+function checkAuth(){
+  const pwd = document.getElementById('authPwd').value;
+  const err = document.getElementById('authErr');
+  if(pwd==='dwb135790'){ sessionStorage.setItem('role','admin'); }
+  else if(pwd==='dongjie345'){ sessionStorage.setItem('role','employee'); }
+  else { err.textContent='密码错误，请重试'; return; }
+  document.getElementById('authOverlay').style.display='none';
+  applyRole();
+}
+function applyRole(){
+  const role = sessionStorage.getItem('role')||'employee';
+  document.querySelectorAll('.admin-only').forEach(el=>{ el.style.display = (role==='admin')?'':'none'; });
+}
+function saveAsTemplate(){ document.getElementById('tplConfirm').style.display='flex'; }
+function doSaveTemplate(){
+  // 收集当前所有值 → 存到 bh_quote_template（与重置模板同一 key，格式对齐 captureDefaults）
+  const flat = {};
+  document.querySelectorAll('input[type="number"], input[type="text"], select').forEach(el=>{ flat[el.id] = el.value; });
+  document.querySelectorAll('input[type="checkbox"]').forEach((el, idx)=>{ flat['cb_'+idx] = el.checked; });
+  flat.style = state.style;
+  flat.dimType = state.dimType;
+  flat.materialType = state.materialType;
+  flat._v = TEMPLATE_VERSION;
+  flat._userSetPrices = Array.from(document.querySelectorAll('[data-user-set="1"]')).map(el=>el.id).filter(Boolean);
+  flat._customCB = getCustomCBData();
+  localStorage.setItem('bh_quote_template', JSON.stringify(flat));
+  // 同步更新内存 defaults，保证 captureDefaults 已用最新版本
+  Object.assign(defaults, flat);
+  document.getElementById('tplConfirm').style.display='none';
+  showToast('✓ 已存为模板（已保存到本地）');
+}
+function hideTplConfirm(){ document.getElementById('tplConfirm').style.display='none'; }
+</script>
+
+<!-- Tesseract.js OCR（图片识别） -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+// 图片 OCR 识别 → 自动填入 parseInput → parseAndFill
+async function ocrAndFill(inputEl){
+  const file = inputEl.files[0];
+  if(!file) return;
+  inputEl.value = ''; // 允许重复选同一张图
+  const parseResult = document.getElementById('parseResult');
+  parseResult.innerHTML = '📷 正在识别图片，请稍候…';
+  try{
+    const result = await Tesseract.recognize(file, 'chi_sim+eng', {
+      logger: m => {
+        if(m.status === 'recognizing text') parseResult.innerHTML = '📷 识别中… '+Math.round(m.progress*100)+'%';
+      }
+    });
+    const text = result.data.text.replace(/\n+/g,' ').trim();
+    if(!text){ parseResult.innerHTML = '📷 未识别到文字，请手动输入'; return; }
+    document.getElementById('parseInput').value = text;
+    parseResult.innerHTML = '📷 识别结果：<b>'+text+'</b>';
+    parseAndFill();
+  }catch(e){
+    parseResult.innerHTML = '📷 识别失败：'+e.message;
+  }
+}
+</script>
+
+<!-- ==================== 打印报价单弹窗 ==================== -->
+<div class="print-overlay" id="printSheetModal" onclick="if(event.target===this)closePrintSheet()">
+  <div class="print-sheet">
+    <h1>报价单</h1>
+    <div class="ps-sub" style="display:none"></div>
+    <div class="ps-meta">
+      <span>日期：<span id="ps_date"></span></span>
+    </div>
+      <div class="ps-printopts" id="ps_printopts">
+        <span class="ps-opt-label">打印内容：</span>
+        <button class="ps-opt" data-opt="verify" onclick="selectPrintOpt('verify')">计算联</button>
+        <button class="ps-opt" data-opt="customer" onclick="selectPrintOpt('customer')">客户联</button>
+      </div>
+    <div id="printSheetContent"></div>
+    <div class="ps-actions">
+      <button onclick="doPrintSheet()">🖨 打印 / 另存为PDF</button>
+      <button onclick="exportExcel()">📊 导出 Excel</button>
+      <button class="ghost" onclick="closePrintSheet()">关闭</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

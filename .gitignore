@@ -1,0 +1,15 @@
+# Python leftovers from earlier ad-hoc scripts
+_xlsm.py
+_xlsm2.py
+
+# WorkBuddy user-level skills (not project-specific, keep out of repo)
+.workbuddy/skills/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swp~
+
+# Local demo downloads (if recreated)
+downloaded_source/
