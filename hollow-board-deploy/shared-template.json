@@ -18,7 +18,7 @@
   "s2_specialPrice": "0",
   "s2_specialRatio": "0",
   "s2_fixedCost": "1700",
-  "s2_profit": "0",
+  "s2_profit": "1800",
   "s3_length": "",
   "s3_width": "",
   "s3_height": "",
@@ -54,5 +54,5 @@
   "_v": 164,
   "_userSetPrices": [],
   "_customCB": [],
-  "_publishedAt": "2026-08-03T11:50:46.811Z"
+  "_publishedAt": "2026-08-04T02:41:31.870Z"
 }
