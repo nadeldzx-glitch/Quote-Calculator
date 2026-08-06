@@ -1584,7 +1584,7 @@ function calcStep3() {
   if(details.length > 0){
     const formulaCalc = details.map(d => fmt(d.price,2)+'('+d.name+')').join('+');
     const calcExpr = (A==='是')
-      ? formulaCalc+'='+fmt(sum,2)+'×(1+'+fmt(B*100,0)+'%)'
+      ? '('+formulaCalc+')×(1+'+fmt(B*100,0)+'%)'
       : formulaCalc;
     proc3.push(cpLine('后加工费用合计', '', calcExpr, fmt(sumAfterTax,3)+' 元'));
   } else {
@@ -2646,8 +2646,7 @@ ${(()=>{
 ${(()=>{
   if(r3.details && r3.details.length>0){
     const detailNum = r3.details.map(d=>fmt(d.price,2)+'('+d.name+')').join('+');
-    const rawSum = r3.details.reduce((a,d)=>a+d.price,0);
-    const procExpr = (taxLabel==='含税') ? (detailNum+'='+fmt(rawSum,2)+'×(1+'+fmt(taxRate,0)+'%)') : detailNum;
+    const procExpr = (taxLabel==='含税') ? ('('+detailNum+')×(1+'+fmt(taxRate,0)+'%)') : detailNum;
     return `<div class="calc-step"><span>后加工费用合计</span> = ${procExpr} = <b>${fmt(r3.sum,3)} 元</b></div>
 <div class="calc-step"><span>成品价格（单）</span> = ${fmt(r3.sheetUnitPrice,3)}+${fmt(r3.sum,3)} = <b>${fmt(r3.productUnitPrice,3)} 元</b></div>`;
   }
