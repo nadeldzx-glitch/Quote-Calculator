@@ -1572,23 +1572,27 @@ function calcStep3() {
     }
   });
 
-  let S=(A==='是')? H+(1+B)*sum : H+sum;
+  // 后加工费用合计：是否含税为"是"时按 (1+税率) 计入，否则保持各工序 raw 价之和
+  const sumAfterTax = (A==='是') ? sum*(1+B) : sum;
   // 同步 r2 板材售价（单）= r2_sheetUnitPrice；成品价格（单）= 板材售价(单) + 加工费合计
   const sheetUnitPrice = +document.getElementById('r2_sheetUnitPrice').textContent || 0;
-  const productUnitPrice = sheetUnitPrice + sum;
+  const productUnitPrice = sheetUnitPrice + sumAfterTax;
 
   // 后加工计算过程（cpLine 四段式格式）
   const proc3 = [];
   // 后加工费用合计 = 各工序单价（工序名称）之和 = 合计金额
   if(details.length > 0){
     const formulaCalc = details.map(d => fmt(d.price,2)+'('+d.name+')').join('+');
-    proc3.push(cpLine('后加工费用合计', '', formulaCalc, fmt(sum,3)+' 元'));
+    const calcExpr = (A==='是')
+      ? formulaCalc+'='+fmt(sum,2)+'×(1+'+fmt(B*100,0)+'%)'
+      : formulaCalc;
+    proc3.push(cpLine('后加工费用合计', '', calcExpr, fmt(sumAfterTax,3)+' 元'));
   } else {
-    proc3.push(cpLine('后加工费用合计', '', '0', fmt(sum,3)+' 元'));
+    proc3.push(cpLine('后加工费用合计', '', '0', fmt(sumAfterTax,3)+' 元'));
   }
   // 成品价格（单）
   proc3.push(cpLine('成品价格（单）', '板材售价（单）+后加工费用合计',
-    fmt(sheetUnitPrice,3)+'+'+fmt(sum,2), fmt(productUnitPrice,3)+' 元'));
+    fmt(sheetUnitPrice,3)+'+'+fmt(sumAfterTax,2), fmt(productUnitPrice,3)+' 元'));
   // 成品价格（总）= 成品价格（单）× 数量
   const quantity = +val('s1_quantity') || 0;
   const productTotalPrice = productUnitPrice * quantity;
@@ -1601,8 +1605,8 @@ function calcStep3() {
   text('r3_productUnitPrice', fmt(productUnitPrice, 3));
   text('r3_quantity', fmt(quantity, 0));
   text('r3_productTotalPrice', fmt(productTotalPrice, 2));
-  text('r3_processingTotal',fmt(sum,3));
-  return {A,B,G,H,sum,details,S,sheetUnitPrice,productUnitPrice,quantity,productTotalPrice};
+  text('r3_processingTotal',fmt(sumAfterTax,3));
+  return {A,B,G,H,sum:sumAfterTax,details,sheetUnitPrice,productUnitPrice,quantity,productTotalPrice};
 }
 
 // 骨架箱(上边条)输入框：手动修改即标记"已填"，切回自动只需清空
@@ -2642,7 +2646,9 @@ ${(()=>{
 ${(()=>{
   if(r3.details && r3.details.length>0){
     const detailNum = r3.details.map(d=>fmt(d.price,2)+'('+d.name+')').join('+');
-    return `<div class="calc-step"><span>后加工费用合计</span> = ${detailNum} = <b>${fmt(r3.sum,3)} 元</b></div>
+    const rawSum = r3.details.reduce((a,d)=>a+d.price,0);
+    const procExpr = (taxLabel==='含税') ? (detailNum+'='+fmt(rawSum,2)+'×(1+'+fmt(taxRate,0)+'%)') : detailNum;
+    return `<div class="calc-step"><span>后加工费用合计</span> = ${procExpr} = <b>${fmt(r3.sum,3)} 元</b></div>
 <div class="calc-step"><span>成品价格（单）</span> = ${fmt(r3.sheetUnitPrice,3)}+${fmt(r3.sum,2)} = <b>${fmt(r3.productUnitPrice,3)} 元</b></div>`;
   }
   return `<div class="calc-step"><span>后加工费用合计</span> = 0 = <b>${fmt(r3.sum,3)} 元</b></div>
