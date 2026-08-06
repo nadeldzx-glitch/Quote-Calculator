@@ -1592,7 +1592,7 @@ function calcStep3() {
   }
   // 成品价格（单）
   proc3.push(cpLine('成品价格（单）', '板材售价（单）+后加工费用合计',
-    fmt(sheetUnitPrice,3)+'+'+fmt(sumAfterTax,2), fmt(productUnitPrice,3)+' 元'));
+    fmt(sheetUnitPrice,3)+'+'+fmt(sumAfterTax,3), fmt(productUnitPrice,3)+' 元'));
   // 成品价格（总）= 成品价格（单）× 数量
   const quantity = +val('s1_quantity') || 0;
   const productTotalPrice = productUnitPrice * quantity;
@@ -2649,10 +2649,10 @@ ${(()=>{
     const rawSum = r3.details.reduce((a,d)=>a+d.price,0);
     const procExpr = (taxLabel==='含税') ? (detailNum+'='+fmt(rawSum,2)+'×(1+'+fmt(taxRate,0)+'%)') : detailNum;
     return `<div class="calc-step"><span>后加工费用合计</span> = ${procExpr} = <b>${fmt(r3.sum,3)} 元</b></div>
-<div class="calc-step"><span>成品价格（单）</span> = ${fmt(r3.sheetUnitPrice,3)}+${fmt(r3.sum,2)} = <b>${fmt(r3.productUnitPrice,3)} 元</b></div>`;
+<div class="calc-step"><span>成品价格（单）</span> = ${fmt(r3.sheetUnitPrice,3)}+${fmt(r3.sum,3)} = <b>${fmt(r3.productUnitPrice,3)} 元</b></div>`;
   }
   return `<div class="calc-step"><span>后加工费用合计</span> = 0 = <b>${fmt(r3.sum,3)} 元</b></div>
-<div class="calc-step"><span>成品价格（单）</span> = ${fmt(r3.sheetUnitPrice,3)}+${fmt(r3.sum,2)} = <b>${fmt(r3.productUnitPrice,3)} 元</b></div>`;
+<div class="calc-step"><span>成品价格（单）</span> = ${fmt(r3.sheetUnitPrice,3)}+${fmt(r3.sum,3)} = <b>${fmt(r3.productUnitPrice,3)} 元</b></div>`;
 })()}
 <div class="calc-step"><b>④ 附加费用计算</b></div>
 ${r1.H>0 ? `<div class="calc-step"><span>(运费+刀模费+丝网费)/数量</span> = (${fmt(r4.E,2)}+${fmt(r4.F,2)}+${fmt(r4.Fa,2)})÷${qty} = <b>${fmt(perExtra, 3)} 元/个</b></div>` : `<div class="calc-step"><span>(运费+刀模费+丝网费)/数量</span> = <b>0 元/个</b></div>`}
