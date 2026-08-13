@@ -2455,7 +2455,10 @@ function buildPrintParts(){
   // —— 先声明所有模板中引用的变量（必须在 const 模板之前）——
   // 左侧：后加工工序列表行（屏幕/PDF 用）
   let procRows = '';
-  r3.details.forEach(d=>{ procRows += `<tr data-label="${d.name}"><td>${d.name}</td><td class="num">${fmt(d.price,2)}</td></tr>`; });
+  r3.details.forEach(d=>{
+    const showPrice = (taxLabel==='含税') ? d.price*(1+taxRate/100) : d.price;
+    procRows += `<tr data-label="${d.name}"><td>${d.name}</td><td class="num">${fmt(showPrice,2)}</td></tr>`;
+  });
   if(procRows==='') procRows = '<tr><td colspan="2" style="text-align:center;color:#999;padding:4px 0;">（未勾选）</td></tr>';
 
   // 客户联：后加工工序只显示名称，不带价格（屏幕/PDF 用）
@@ -2465,7 +2468,10 @@ function buildPrintParts(){
 
   // Excel 导出专用：后加工工序行（内联样式）
   let procRowsExcel = '';
-  r3.details.forEach(d=>{ procRowsExcel += `<tr data-label="${d.name}"><td style="width:70%;color:#555;border-bottom:1px dotted #eee;padding:3px 0;">${d.name}</td><td style="width:30%;text-align:right;font-weight:600;color:#0f172a;border-bottom:1px dotted #eee;padding:3px 0;">${fmt(d.price,2)}</td></tr>`; });
+  r3.details.forEach(d=>{
+    const showPrice = (taxLabel==='含税') ? d.price*(1+taxRate/100) : d.price;
+    procRowsExcel += `<tr data-label="${d.name}"><td style="width:70%;color:#555;border-bottom:1px dotted #eee;padding:3px 0;">${d.name}</td><td style="width:30%;text-align:right;font-weight:600;color:#0f172a;border-bottom:1px dotted #eee;padding:3px 0;">${fmt(showPrice,2)}</td></tr>`;
+  });
   if(procRowsExcel==='') procRowsExcel = '<tr><td colspan="2" style="text-align:center;color:#999;padding:4px 0;border-bottom:1px dotted #eee;">（未勾选）</td></tr>';
 
   // Excel 导出专用：客户联后加工工序行（内联样式，不带价格）
