@@ -2452,6 +2452,10 @@ function buildPrintParts(){
   const now = new Date();
   const dateTxt = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
 
+  // 税率相关变量（必须在所有模板引用之前声明）
+  const taxLabel = document.getElementById('s1_tax').value === '是' ? '含税' : '不含税';
+  const taxRate = +val('s1_taxRate');
+
   // —— 先声明所有模板中引用的变量（必须在 const 模板之前）——
   // 左侧：后加工工序列表行（屏幕/PDF 用）
   let procRows = '';
@@ -2480,8 +2484,6 @@ function buildPrintParts(){
   if(procRowsCustomerExcel==='') procRowsCustomerExcel = '<tr><td style="text-align:center;color:#999;padding:4px 0;border-bottom:1px dotted #eee;">（未勾选）</td></tr>';
 
   // 中间变量
-  const taxLabel = document.getElementById('s1_tax').value === '是' ? '含税' : '不含税';
-  const taxRate = +val('s1_taxRate');
   const shipFeeLabel = document.getElementById('s1_shipFee').value === '是' ? '含运' : '不含运';
   const addressVal = (document.getElementById('s1_address').value || '').trim() || '—';
   const areaVal = fmt(r1.L, 3);
