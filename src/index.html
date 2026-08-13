@@ -1582,7 +1582,7 @@ function calcStep3() {
   const proc3 = [];
   // 后加工费用合计 = 各工序单价（工序名称）之和 = 合计金额
   if(details.length > 0){
-    const formulaCalc = details.map(d => fmt(d.price,2)+'('+d.name+')').join('+');
+    const formulaCalc = details.map(d => fmt(d.price,3)+'('+d.name+')').join('+');
     const calcExpr = (A==='是')
       ? '('+formulaCalc+')×(1+'+fmt(B*100,0)+'%)'
       : formulaCalc;
@@ -1761,7 +1761,7 @@ function cpLine(k, formula, calc, val){
 function cpHead(t){ return `<div class="cp-head">${t}</div>`; }
 
 const defaults = {};
-const TEMPLATE_VERSION = 164;
+const TEMPLATE_VERSION = 165;
 // 可接受的最低模板版本：v163→v164 纯逻辑修改、模板结构相同，旧模板继续有效。
 // ⚠️ 只有 DOM/字段结构变化（增删输入框/勾选框/id 改名）才允许 bump 版本号——
 // 纯 JS 逻辑修复不要 bump，否则用户已存模板会被误判失效！
@@ -2653,7 +2653,7 @@ ${(()=>{
 <div class="calc-step"><b>③ 后加工价格计算</b></div>
 ${(()=>{
   if(r3.details && r3.details.length>0){
-    const detailNum = r3.details.map(d=>fmt(d.price,2)+'('+d.name+')').join('+');
+    const detailNum = r3.details.map(d=>fmt(d.price,3)+'('+d.name+')').join('+');
     const procExpr = (taxLabel==='含税') ? ('('+detailNum+')×(1+'+fmt(taxRate,0)+'%)') : detailNum;
     return `<div class="calc-step"><span>后加工费用合计</span> = ${procExpr} = <b>${fmt(r3.sum,3)} 元</b></div>
 <div class="calc-step"><span>成品价格（单）</span> = ${fmt(r3.sheetUnitPrice,3)}+${fmt(r3.sum,3)} = <b>${fmt(r3.productUnitPrice,3)} 元</b></div>`;
