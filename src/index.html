@@ -988,10 +988,16 @@ select.form-control {
 
     <!-- 骨架箱三合一行 -->
     <div class="cb-trio">
-      <label class="cb-item" data-key="fibertape">
+      <label class="cb-item" data-key="fiber">
         <input type="checkbox" onchange="calcAll()">
-        <span class="cb-text">纤维胶/魔术贴角(4角)</span>
-        <input type="number" id="s3p_fibertape" value="1.5" oninput="calcAll()">
+        <span class="cb-text">纤维胶</span>
+        <input type="number" id="s3p_fiber" value="0.5" oninput="calcAll()">
+        <span style="font-size:10px;color:#9ca3af;">元</span>
+      </label>
+      <label class="cb-item" data-key="velcro_corner">
+        <input type="checkbox" onchange="calcAll()">
+        <span class="cb-text">魔术贴角(4角)</span>
+        <input type="number" id="s3p_velcro_corner" value="1" oninput="calcAll()">
         <span style="font-size:10px;color:#9ca3af;">元</span>
       </label>
       <label class="cb-item" data-key="skeleton_corner">
@@ -1761,11 +1767,13 @@ function cpLine(k, formula, calc, val){
 function cpHead(t){ return `<div class="cp-head">${t}</div>`; }
 
 const defaults = {};
-const TEMPLATE_VERSION = 165;
-// 可接受的最低模板版本：v163→v164 纯逻辑修改、模板结构相同，旧模板继续有效。
+const TEMPLATE_VERSION = 166;
+// 可接受的最低模板版本：v165→v166 将工序"纤维胶/魔术贴角(4角)"拆分为"纤维胶"+"魔术贴角(4角)"
+// 两个独立勾选项（s3p_fibertape → s3p_fiber + s3p_velcro_corner）。
+// checkbox 状态按 DOM 索引序列化，新增勾选框使旧模板索引错位，故 MIN 同步升至 166，旧模板失效。
 // ⚠️ 只有 DOM/字段结构变化（增删输入框/勾选框/id 改名）才允许 bump 版本号——
 // 纯 JS 逻辑修复不要 bump，否则用户已存模板会被误判失效！
-const TEMPLATE_MIN_VERSION = 163;
+const TEMPLATE_MIN_VERSION = 166;
 
 // ============ 共享模板（全员同步）============
 // 共享模板存放于仓库公开文件 hollow-board-deploy/shared-template.json，
@@ -2235,10 +2243,15 @@ function parseAndFill() {
   if(m) { setVal('s1_usageRate', m[1]); filled.push('使用率:'+m[1]+'%'); }
 
   // === 18. 加工工序（支持简写，铆钉先于打钉避免"钉"冲突）===
-  // 纤维胶/魔术贴角（先匹配，避免与"魔术贴"冲突）
-  m = take(/(?:纤维胶|魔术贴角|胶)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
-  if(m) { checkProcess('fibertape', m[1]); filled.push('纤维胶:'+m[1]+'元'); }
-  else if(take(/(?:纤维胶|魔术贴角|胶)/)) { checkProcess('fibertape'); filled.push('纤维胶(默认)'); }
+  // 纤维胶（独立工序；先匹配，避免与"魔术贴"冲突）
+  m = take(/(?:纤维胶|胶)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { checkProcess('fiber', m[1]); filled.push('纤维胶:'+m[1]+'元'); }
+  else if(take(/(?:纤维胶|胶)/)) { checkProcess('fiber'); filled.push('纤维胶(默认)'); }
+
+  // 魔术贴角(4角)（独立工序；必须先于"魔术贴"匹配）
+  m = take(/魔术贴角\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
+  if(m) { checkProcess('velcro_corner', m[1]); filled.push('魔术贴角:'+m[1]+'元'); }
+  else if(take(/魔术贴角/)) { checkProcess('velcro_corner'); filled.push('魔术贴角(默认)'); }
 
   // 铆钉（先于打钉，避免"钉"匹配铆钉中的"钉"）
   m = take(/(?:铆钉|铆)\s*:?\s*(\d+(?:\.\d+)?)\s*元?/);
@@ -2381,7 +2394,9 @@ function setSelect(id, v) {
   if(el) el.value = v;
 }
 function checkProcess(key, price) {
-  const item = document.querySelector('#cb_grid .cb-item[data-key="'+key+'"]');
+  // 全容器查找（#cb_grid / .cb-trio / #cb_grid2 / #cb_custom_grid），
+  // 此前只查 #cb_grid，导致 .cb-trio 内工序（纤维胶/魔术贴角/骨架箱）文字识别静默失效
+  const item = document.querySelector('.cb-item[data-key="'+key+'"]');
   if(!item) return;
   const cb = item.querySelector('input[type="checkbox"]');
   cb.checked = true;
