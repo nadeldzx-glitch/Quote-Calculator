@@ -11,7 +11,7 @@
   "s1_taxRate": "7",
   "s1_shipFee": "是",
   "s1_address": "",
-  "s2_newPrice": "9300",
+  "s2_newPrice": "9000",
   "s2_newRatio": "100.0",
   "s2_masterPrice": "2000",
   "s2_masterRatio": "0",
@@ -28,7 +28,8 @@
   "s3p_silkprint": "0.5",
   "s3p_handle": "1.2",
   "s3p_velcro": "5",
-  "s3p_fibertape": "1.5",
+  "s3p_fiber": "1.5",
+  "s3p_velcro_corner": "2.5",
   "s3p_skeletonCorner": "3.4",
   "s3_skeleton_edge": "0.00",
   "s3p_clip": "1.5",
@@ -48,13 +49,12 @@
   "cb_7": false,
   "cb_8": false,
   "cb_9": false,
+  "cb_10": false,
   "style": "板材",
   "dimType": "",
   "materialType": "普通",
-  "_v": 165,
-  "_userSetPrices": [
-    "s2_newPrice"
-  ],
+  "_v": 166,
+  "_userSetPrices": [],
   "_customCB": [],
-  "_publishedAt": "2026-08-26T02:59:43.670Z"
+  "_publishedAt": "2026-08-27T08:01:08.259Z"
 }
