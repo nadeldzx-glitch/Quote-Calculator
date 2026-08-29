@@ -11,7 +11,7 @@
   "s1_taxRate": "7",
   "s1_shipFee": "是",
   "s1_address": "",
-  "s2_newPrice": "9000",
+  "s2_newPrice": "9300",
   "s2_newRatio": "100.0",
   "s2_masterPrice": "2000",
   "s2_masterRatio": "0",
@@ -54,7 +54,9 @@
   "dimType": "",
   "materialType": "普通",
   "_v": 166,
-  "_userSetPrices": [],
+  "_userSetPrices": [
+    "s2_newPrice"
+  ],
   "_customCB": [],
-  "_publishedAt": "2026-08-27T08:01:08.259Z"
+  "_publishedAt": "2026-08-29T07:21:04.874Z"
 }
