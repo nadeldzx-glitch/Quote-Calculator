@@ -1805,37 +1805,41 @@ async function loadSharedTemplate(){
 }
 
 // admin 存为模板时，把模板写回仓库共享文件（触发 Pages 重新部署，全员刷新即同步）
+// 发布改用 GitHub 官方库 @octokit/rest（jsdelivr +esm 动态加载，仅 admin 发布时拉取），
+// 替代手写 fetch + GitHub Contents API；库内部处理鉴权头/错误/限流等细节。
 async function publishSharedTemplate(flat){
   if(!GITHUB_TOKEN || GITHUB_TOKEN.indexOf('__FILL') === 0){
     showToast('尚未配置 GitHub token，仅保存到本地');
     return;
   }
-  const api = 'https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + SHARED_TEMPLATE_PATH;
-  const headers = { Authorization: 'Bearer ' + GITHUB_TOKEN, Accept: 'application/vnd.github+json' };
   try {
-    // 取现有文件 SHA（更新需要）
+    const { Octokit } = await import('https://cdn.jsdelivr.net/npm/@octokit/rest@20.1.2/+esm');
+    const octokit = new Octokit({ auth: GITHUB_TOKEN });
+    const [owner, repo] = GITHUB_REPO.split('/');
+    const path = SHARED_TEMPLATE_PATH;
+    // 取现有文件 SHA（更新需要；文件不存在时 404，忽略后走新建分支）
     let sha;
     try {
-      const r = await fetch(api, { headers });
-      if(r.ok){ const d = await r.json(); sha = d.sha; }
-    } catch(e) {}
+      const res = await octokit.rest.repos.getContent({ owner, repo, path });
+      sha = res.data && res.data.sha;
+    } catch(e) { /* 404 = 文件尚不存在，首次发布 */ }
     // 附发布时间戳：用于"已上线"轮询确认 + 同事端检测到有新模板
     const payload = Object.assign({}, flat, { _publishedAt: new Date().toISOString() });
+    // GitHub Contents API 要求 content 为 base64；btoa+unescape+encodeURIComponent 保证中文 UTF-8 安全
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(payload, null, 2))));
-    const body = { message: 'update shared template (admin publish)', content };
-    if(sha) body.sha = sha;
-    const up = await fetch(api, { method: 'PUT', headers: Object.assign({ 'Content-Type': 'application/json' }, headers), body: JSON.stringify(body) });
-    if(up.ok){
-      sharedTemplate = payload;            // 当前页面立即生效
-      _appliedPublishedAt = payload._publishedAt;
-      showToast('✓ 已提交发布，正在等待上线（约1分钟）…');
-      waitForSharedTemplateLive(payload._publishedAt);   // 轮询确认真正上线后再提示
-    } else {
-      const err = await up.json().catch(()=>({}));
-      showToast('发布失败：' + (err.message || ('HTTP ' + up.status)));
-    }
+    await octokit.rest.repos.createOrUpdateFileContents({
+      owner, repo, path,
+      message: 'update shared template (admin publish)',
+      content,
+      sha
+    });
+    sharedTemplate = payload;            // 当前页面立即生效
+    _appliedPublishedAt = payload._publishedAt;
+    showToast('✓ 已提交发布，正在等待上线（约1分钟）…');
+    waitForSharedTemplateLive(payload._publishedAt);   // 轮询确认真正上线后再提示
   } catch(e){
-    showToast('发布失败：网络错误');
+    const msg = (e && e.message) ? e.message : ((e && e.status) ? ('HTTP ' + e.status) : '网络错误');
+    showToast('发布失败：' + msg);
   }
 }
 
