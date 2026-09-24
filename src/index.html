@@ -1808,7 +1808,9 @@ async function loadSharedTemplate(){
 // 发布改用 GitHub 官方库 @octokit/rest（jsdelivr +esm 动态加载，仅 admin 发布时拉取），
 // 替代手写 fetch + GitHub Contents API；库内部处理鉴权头/错误/限流等细节。
 async function publishSharedTemplate(flat){
-  if(!GITHUB_TOKEN || GITHUB_TOKEN.indexOf('__FILL') === 0){
+  // ⚠️ 占位符必须与 build.mjs 的 TOKEN_PLACEHOLDER 完全一致：'__GH_TOKEN_FROM_SECRET__'
+  // 此前误写成 '__FILL'，导致本地/未注入 token 时保护不触发，反而拿假 token 调 API 拿到 401。
+  if(!GITHUB_TOKEN || GITHUB_TOKEN.indexOf('__GH_TOKEN') === 0){
     showToast('尚未配置 GitHub token，仅保存到本地');
     return;
   }
